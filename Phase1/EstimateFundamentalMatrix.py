@@ -1,12 +1,12 @@
 import numpy as np
 
 class FMatrix():
-    def __init__(self, points) -> None:
-        self.points = points
+    def __init__(self) -> None:
+        pass
 
-    def estimateFMatrix(self):
+    def estimateFMatrix(self, points):
         A = np.array()
-        for pts in self.points:
+        for pts in points:
             x1, y1, x2, y2 = pts[0], pts[1], pts[2], pts[3]
 
             np.append(A, [x1*x2, x1*y2, x1, y1*x2, y1*y2, y1, x2, y2, 1])

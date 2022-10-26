@@ -1,7 +1,22 @@
 import argparse
 import numpy as np
-from ImageHelper import *
-from createPairMatches import *
+from Helper.ImageHelper import *
+from Helper.createPairMatches import *
+from GetInliersRANSAC import *
+
+def readCalibrationMatrix(path):
+    '''Read the calibration matrix'''
+    with open(path+"calibration.txt", 'r') as f:
+        contents = f.read()
+
+    K = []
+    for i in contents.split():
+        K.append(float(i))
+
+    K = np.array(K)
+    K = np.reshape(K, (3,3))
+    return K
+
 
 def main():
     Parser = argparse.ArgumentParser()
@@ -13,20 +28,17 @@ def main():
 
     if findImgPair:
         createMatchestxt(data_path)
+    # get the camera calibration matrix
+    K = readCalibrationMatrix(data_path)
 
-    # -------------------------------------------------------------------------#
-    with open(data_path+"calibration.txt", 'r') as f:
-        contents = f.read()
-
-    K = []
-    for i in contents.split():
-        K.append(float(i))
-
-    K = np.array(K)
-    K = np.reshape(K, (3,3))
-    # -------------------------------------------------------------------------#
     imgHelper = ImageHelper(data_path)
     images = imgHelper.readImages()
+    # initial points(before ransac)
+    matchPoints = imgHelper.readPoints("matches12.txt")
+
+    # RANSAC
+    ransacObj = RANSAC()
+    ransacObj.getInliersRansac(matchPoints)
 
 
 
