@@ -31,6 +31,7 @@ def main():
     # get the camera calibration matrix
     K = readCalibrationMatrix(data_path)
 
+    P1 = np.dot(K, np.hstack((np.identity(3), np.zeros((3,1)))))
     imgHelper = ImageHelper(data_path)
     images = imgHelper.readImages()
     # initial points(before ransac)
@@ -38,7 +39,8 @@ def main():
 
     # RANSAC
     ransacObj = RANSAC()
-    ransacObj.getInliersRansac(matchPoints)
+    inlierPoints, outlierPoints, bestF, img1Pts, img2Pts = ransacObj.getInliersRansac(matchPoints)
+
 
 
 
