@@ -55,11 +55,11 @@ def main():
 
     # Camera Pose
     cameraPoseObj = CameraPose(E)
-    C2, R2 = cameraPoseObj.cameraPoses()
+    potentailC2, potentailR2 = cameraPoseObj.cameraPoses()
 
     # LinearTriangulation
     disObj = Disambiguate(inlierPoints, K)
-    disObj.disambiguateCameraPose(C1, R1, C2, R2)
+    bestX, bestC, bestR, index = disObj.disambiguateCameraPose(C1, R1, potentailC2, potentailR2, P1)
 
 
 

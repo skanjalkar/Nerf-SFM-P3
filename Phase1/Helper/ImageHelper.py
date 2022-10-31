@@ -3,7 +3,7 @@ import cv2
 import pry
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib
+import matplotlib as mpl
 from cycler import cycler
 import math
 
@@ -84,20 +84,30 @@ class Plot():
         pass
 
 
-    def plotTriangle(self, bestX, bestC, bestR):
+    def plotTriangle(self, bestX, bestC, bestR, i):
         bestX = np.array(bestX)
-        bestX = np.reshape((bestX.shape[0], 3))
+        # pry()
+        # bestX = np.reshape((bestX.shape[0], 3))
 
-        custom_cycler = cycler(color=['c', 'm', 'y', 'k'])
+        colors = np.array(['y', 'b', 'c', 'r'])
         ax = plt.gca()
+        ax.plot(0, 0, marker=mpl.markers.CARETDOWN, markersize=15, color='k')
 
-        ax.plot(0, 0, marker=matplotlib.markers.v)
         eulerAngles = self.rotationMatrixToEulerAngles(bestR)
-        anglesOfCamera = np.rad2deg(eulerAngles)
+        cameraAngle = np.rad2deg(eulerAngles)
 
-        # t = matplotlib.markers.Mar
+        t = mpl.markers.MarkerStyle(marker=mpl.markers.CARETDOWN)
+        # pry()
+        t._transform = t.get_transform().rotate_deg(int(cameraAngle[1]))
+
         x = bestX[:, 0]
         z = bestX[:, 2]
+
+        ax.scatter((bestC[0]), (bestC[1]), marker=t, s=250, color=colors[i])
+        ax.scatter(x, z, s=4, color=colors[i])
+        ax.set_xlabel('X')
+        ax.set_ylabel('Z')
+
 
 
     # https://learnopencv.com/rotation-matrix-to-euler-angles/
@@ -111,7 +121,7 @@ class Plot():
     def rotationMatrixToEulerAngles(self, R):
         assert(self.isRotationMatrix(R))
 
-        sy = math.sqrt(R[0,0]*R[0,0]+R[1,0])
+        sy = math.sqrt(R[0,0]*R[0,0]+R[1,0]*R[1,0])
         singular = sy < 1e-6
 
         if not singular:

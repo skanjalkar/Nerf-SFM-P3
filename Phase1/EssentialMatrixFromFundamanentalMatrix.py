@@ -15,4 +15,5 @@ class EMatrix():
 
         # Newly caluclated E amtrix
         E = np.dot(np.dot(u,D),v_t)
+        # print(E)
         return E
