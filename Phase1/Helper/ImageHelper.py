@@ -2,6 +2,11 @@ import os
 import cv2
 import pry
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib
+from cycler import cycler
+import math
+
 
 class ImageHelper():
     def __init__(self, path) -> None:
@@ -46,9 +51,7 @@ class ImageHelper():
         for i in range(len(inliers)):
             img1x, img1y = int(inliers[i][0]), int(inliers[i][1])
             img2x, img2y = int(inliers[i][2]), int(inliers[i][3])
-            print(img1x, img1y)
-            print()
-            print(img2x, img2y)
+
             cv2.circle(appendedImage, (img1x, img1y), 3, (0, 0, 0), 1)
             cv2.circle(appendedImage, (img2x + np.int(image1.shape[1]), img2y), 3, (255, 0, 0), 1)
             cv2.line(appendedImage, (img1x, img1y), (img2x + np.int(image1.shape[1]), img2y), (0, 255, 0), 1)
@@ -59,18 +62,65 @@ class ImageHelper():
     def plotOutliers(self, image1, image2, outliers):
         height = max(image1.shape[0], image2.shape[0])
         width = image1.shape[1]+image2.shape[1]
-        appendedImage = np.zeros_like((height, width, 3))
+
+        appendedImage = np.zeros((height, width, 3), type(image1.flat[0]))
         appendedImage[:image1.shape[0], :image1.shape[1], :] = image1
         appendedImage[:image2.shape[0], image1.shape[1]:, :] = image2
 
         for i in range(len(outliers)):
-            img1x, img1y = outliers[i][0], outliers[i][1]
-            img2x, img2y = outliers[i][2], outliers[i][3]
+            img1x, img1y = int(outliers[i][0]), int(outliers[i][1])
+            img2x, img2y = int(outliers[i][2]), int(outliers[i][3])
 
             cv2.circle(appendedImage, (img1x, img1y), 3, (0, 0, 0), 1)
-            cv2.circle(appendedImage, (img2x + np.float32(image1.shape[1]), img2y), 3, (255, 0, 0), 1)
-            cv2.line(appendedImage, (img1x, img1y), (img2x + np.float32(image1.shape[1]), img2y), (0, 255, 0), 1)
+            cv2.circle(appendedImage, (img2x + np.int(image1.shape[1]), img2y), 3, (255, 0, 0), 1)
+            cv2.line(appendedImage, (img1x, img1y), (img2x + np.int(image1.shape[1]), img2y), (0, 0, 255), 1)
         cv2.imshow("Outliers", appendedImage)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
+
+class Plot():
+    def __init__(self) -> None:
+        pass
+
+
+    def plotTriangle(self, bestX, bestC, bestR):
+        bestX = np.array(bestX)
+        bestX = np.reshape((bestX.shape[0], 3))
+
+        custom_cycler = cycler(color=['c', 'm', 'y', 'k'])
+        ax = plt.gca()
+
+        ax.plot(0, 0, marker=matplotlib.markers.v)
+        eulerAngles = self.rotationMatrixToEulerAngles(bestR)
+        anglesOfCamera = np.rad2deg(eulerAngles)
+
+        # t = matplotlib.markers.Mar
+        x = bestX[:, 0]
+        z = bestX[:, 2]
+
+
+    # https://learnopencv.com/rotation-matrix-to-euler-angles/
+    def isRotationMatrix(self, R):
+        Rt = R.T
+        shouldBeIdentity = np.dot(Rt, R)
+        I = np.identity(3, dtype=R.dtype)
+        n = np.linalg.norm(I - shouldBeIdentity)
+        return n < 1e-6
+
+    def rotationMatrixToEulerAngles(self, R):
+        assert(self.isRotationMatrix(R))
+
+        sy = math.sqrt(R[0,0]*R[0,0]+R[1,0])
+        singular = sy < 1e-6
+
+        if not singular:
+            x = math.atan2(R[2,1], R[2,2])
+            y = math.atan2(-R[2,0], sy)
+            z = math.atan2(R[1,0], R[0,0])
+        else:
+            x = math.atan2(-R[1,2], R[1,1])
+            y = math.atan2(-R[2,0], sy)
+            z = 0
+
+        return np.array([x, y, z])

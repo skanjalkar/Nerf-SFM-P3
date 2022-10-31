@@ -5,6 +5,7 @@ from Helper.createPairMatches import *
 from GetInliersRANSAC import *
 from EssentialMatrixFromFundamanentalMatrix import *
 from ExtractCameraPose import *
+from DisambiguateCameraPose import *
 
 def readCalibrationMatrix(path):
     '''Read the calibration matrix'''
@@ -34,6 +35,8 @@ def main():
     K = readCalibrationMatrix(data_path)
 
     P1 = np.dot(K, np.hstack((np.identity(3), np.zeros((3,1)))))
+    R1, C1 = P1[:3, :3], P1[:, -1]
+    # pry()
     imgHelper = ImageHelper(data_path)
     images = imgHelper.readImages()
     # initial points(before ransac)
@@ -44,6 +47,7 @@ def main():
     ransacObj = RANSAC()
     inlierPoints, outlierPoints, bestF, img1Pts, img2Pts = ransacObj.getInliersRansac(matchPoints)
     imgHelper.plotInliers(images[0], images[1], inlierPoints, "Inliers", False)
+    imgHelper.plotOutliers(images[0], images[1], outlierPoints)
 
     # Essential matrix
     eObj = EMatrix(bestF, K)
@@ -51,7 +55,12 @@ def main():
 
     # Camera Pose
     cameraPoseObj = CameraPose(E)
-    C, R = cameraPoseObj.cameraPoses()
+    C2, R2 = cameraPoseObj.cameraPoses()
+
+    # LinearTriangulation
+    disObj = Disambiguate(inlierPoints, K)
+    disObj.disambiguateCameraPose(C1, R1, C2, R2)
+
 
 
 
