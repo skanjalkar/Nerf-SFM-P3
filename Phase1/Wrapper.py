@@ -3,6 +3,8 @@ import numpy as np
 from Helper.ImageHelper import *
 from Helper.createPairMatches import *
 from GetInliersRANSAC import *
+from EssentialMatrixFromFundamanentalMatrix import *
+from ExtractCameraPose import *
 
 def readCalibrationMatrix(path):
     '''Read the calibration matrix'''
@@ -43,6 +45,13 @@ def main():
     inlierPoints, outlierPoints, bestF, img1Pts, img2Pts = ransacObj.getInliersRansac(matchPoints)
     imgHelper.plotInliers(images[0], images[1], inlierPoints, "Inliers", False)
 
+    # Essential matrix
+    eObj = EMatrix(bestF, K)
+    E = eObj.getEssentialMatrix()
+
+    # Camera Pose
+    cameraPoseObj = CameraPose(E)
+    C, R = cameraPoseObj.cameraPoses()
 
 
 
