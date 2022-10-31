@@ -62,7 +62,5 @@ def main():
     bestX, bestC, bestR, index = disObj.disambiguateCameraPose(C1, R1, potentailC2, potentailR2, P1)
 
 
-
-
 if __name__ == "__main__":
     main()
