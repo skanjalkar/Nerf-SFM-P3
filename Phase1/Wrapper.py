@@ -36,10 +36,12 @@ def main():
     images = imgHelper.readImages()
     # initial points(before ransac)
     matchPoints = imgHelper.readPoints("matches12.txt")
+    matchPoints = np.array(matchPoints, np.float32)
 
     # RANSAC
     ransacObj = RANSAC()
     inlierPoints, outlierPoints, bestF, img1Pts, img2Pts = ransacObj.getInliersRansac(matchPoints)
+    imgHelper.plotInliers(images[0], images[1], inlierPoints, "Inliers", False)
 
 
 

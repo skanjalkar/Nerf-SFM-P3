@@ -2,12 +2,13 @@ import cv2
 import numpy as np
 from EstimateFundamentalMatrix import *
 import pry
+import random
 import sys
 import math
 
 class RANSAC():
     def __init__(self) -> None:
-        self.threshold = 0.05
+        self.threshold = 0.005
         self.iterations=10000
         self.bestF = None
         self.maxNumInliers = 0
@@ -20,10 +21,12 @@ class RANSAC():
         # you get a dimenstional error when trying to calculate x2TFx1
         img1Pts = np.hstack((img1pts, np.ones((img1pts.shape[0], 1))))
         img2Pts = np.hstack((img2pts, np.ones((img2pts.shape[0], 1))))
-
+        random.seed(42)
         max_inliers = 0
         for i in range(self.iterations):
             randompts = np.random.choice(len(img1Pts), size=8)
+            # randompts = np.array(random.sample(list(points), 8), np.float32)
+            # pry()
             points1_8 = img1Pts[randompts, :]
             points2_8 = img2Pts[randompts, :]
             pts_to_F_matrix = []
@@ -33,7 +36,7 @@ class RANSAC():
 
             fObj = FMatrix()
             F = fObj.estimateFMatrix(pts_to_F_matrix)
-
+            # F = fObj.estimateFMatrix(randompts)
             x2TFx1 = np.abs(np.diag(np.dot(np.dot(img1Pts, F), img2Pts.T)))
             inliersNum = np.where(x2TFx1<self.threshold)
             outliersNum = np.where(x2TFx1>=self.threshold)
@@ -48,6 +51,6 @@ class RANSAC():
             print(f'------------------------------------------------------------------------')
             sys.exit()
         self.bestF = fObj.estimateFMatrix(points[self.maxNumInliers])
-        print(self.bestF)
-
+        # print(self.bestF)
+        # print(self.maxNumInliers)
         return points[self.maxNumInliers], points[self.maxNumOutliers], self.bestF, img1pts, img2pts
