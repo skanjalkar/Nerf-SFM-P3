@@ -29,4 +29,18 @@ class ImageHelper():
         pts = np.array(pts)
         return pts
 
+    def plotInliers(self, image1, image2, inliers, matchesBW, save=False):
+        height = max(image1.shape[0], image2.shape[0])
+        width = image1.shape[1]+image2.shape[1]
+
+        appendedImage = np.zeros_like((height, width, 3))
+        appendedImage[:image1.shape[0], :image1.shape[1], :] = image1
+        appendedImage[:image2.shape[0], image1.shape[1]:, :] = image2
+
+        for i in range(len(inliers)):
+            img1x, img1y = inliers[i][0], inliers[i][1]
+            img2x, img2y = inliers[i][2], inliers[i][3]
+
+            cv2.circle(appendedImage, (img1x, img1y), 3, (0, 0, 0), 1)
+
 
