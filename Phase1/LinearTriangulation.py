@@ -5,7 +5,6 @@ def skew(x):
 
 def LinearTriangulation(K, C1, R1, C2, R2, x1, x2):
 
-
     n_points = x1.shape[0]
     
     C1 = np.reshape(C1, (3, 1))
