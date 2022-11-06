@@ -16,6 +16,8 @@ def PNP_linear(x_list,X_list,K):
     '''
 
     #Initializing A matrix for SVD
+
+    #############################need to inialize this properly
     A = np.empty((0, 12), np.float32)
     
     for x,X in zip(x_list,X_list):
@@ -34,7 +36,7 @@ def PNP_linear(x_list,X_list,K):
         A_one_point=np.dot(skew(x),A)
         A=np.vstack(A,A_one_point)
        
-    A = np.float32(A)
+    A = np.float32(A[1:,:])
     U,D,V_t = np.linalg.svd(A)
 
     V = V_t.T
