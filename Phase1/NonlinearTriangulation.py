@@ -24,16 +24,16 @@ def Non_Linear_Triangulation(K,P1, P2, X_estimate, inlier_points, X_updated_list
 
     return X_updated_list
 
-def optimizer(x0, point1, P1, point2, P2, reprojection_error=0):
+def optimizer(X, point1, P1, point2, P2, reprojection_error=0):
 
     #calaculating reprojected point x from camera 1
-    x0 = np.reshape(x0, (3, 1))
-    x0 = np.vstack((x0, 1))
-    x = np.dot(P1, x0)
+    X = np.reshape(X, (3, 1))
+    X = np.vstack((X, 1))
+    x = np.dot(P1, X)
     x = x/x[2]
     
     #calacualting reprojected point x from camera 1
-    x_dash = np.dot(P2, x0)
+    x_dash = np.dot(P2, X)
     x_dash = x_dash/x_dash[2]
 
     #reprojection error calculation for camera 1 and 2
