@@ -21,7 +21,11 @@ class Train():
 
     def get_ray_bundle(self, pose):
         ii, jj = self.meshgridxy(torch.arange(self.width).to(pose), torch.arange(self.height).to(pose))
+        # print(ii.dtype)
+        # print('---------')
+        # print(jj.dtype)
         directions = torch.stack([(ii - self.width*0.5)/self.focalLength, -(jj-self.height*0.5)/self.focalLength, -torch.ones_like(ii)], dim=-1)
+        # print(directions.dtype)
         ray_directions = torch.sum(directions[..., None, :]*pose[:3, :3], dim=-1)
         ray_origins = pose[:3, -1].expand(ray_directions.shape)
         # pry()
@@ -29,8 +33,12 @@ class Train():
 
     def computeQueryPoints(self, ray_origins, ray_directions, depth_samples_per_ray):
         depth_values = torch.linspace(self.near_threshold, self.far_threshold, depth_samples_per_ray).to(ray_origins)
+        # print(depth_values.shape)
+        # print('------------DEPTH VALUES BEFORE NOISE----------------------------')
         noise_shape = list(ray_origins.shape[:-1])+[depth_samples_per_ray]
+        # print(noise_shape)
         depth_values = depth_values + torch.rand(noise_shape).to(ray_origins)*(self.far_threshold-self.near_threshold)/depth_samples_per_ray
+        # print(depth_values.shape)
         query_points = ray_origins[..., None, :] + ray_directions[..., None, :]*depth_values[..., :, None]
         # pry()
         return query_points, depth_values
@@ -44,11 +52,12 @@ class Train():
             dtype=tensor.dtype,
             device=tensor.device,
         )
-
+        print(len(encoding[0]))
+        print("Encoding")
         for frequency in frequencyBands:
             for function in [torch.sin, torch.cos]:
                 encoding.append(function(tensor*frequency))
-
+        print(len(encoding[1]))
         return torch.cat(encoding, dim=-1)
 
     def miniBatches(self, ray_bundle, chunksize):
@@ -77,13 +86,23 @@ class Train():
         psnrs = []
 
         for i in range(num_iterations):
+            "Current iteration"
+            print(i)
             randomImageIndex = np.random.randint(self.images.shape[0])
             randomImage = self.images[randomImageIndex].to(device)
             pose = self.poses[randomImageIndex].to(device)
 
             # runNerfModel
             rgbPredicted, depthMap, accuracyMap = self.runNerfModel(depth_samples_per_ray, encode, pose, chunksize, model)
+            print(rgbPredicted.dtype)
+            randomImage = randomImage.float()
+            # randomImage = np.array(randomImage)
+            # randomImage = randomImage.astype(np.float32)
+            # randomImage = torch.from_numpy(randomImage)
+            # asdasdop
+            print(randomImage.dtype)
             loss = torch.nn.functional.mse_loss(rgbPredicted, randomImage)
+            print("loss:", loss.item())
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
@@ -98,37 +117,62 @@ class Train():
                 psnr = -10.*torch.log10(loss)
 
                 iters.append(i)
-                psnrs.append(psnr)
+                psnrs.append(psnr.detach().cpu().numpy())
 
-                plt.figure(figsize=(10, 4))
-                plt.subplot(121)
-                plt.imshow(rgbPredicted.detach().cpu().numpy())
-                plt.title(f'iteartions{i}')
-                plt.subplot(122)
-                plt.plot(iters, psnrs)
-                plt.title("PSNR")
-                plt.show()
+                # plt.figure(figsize=(10, 4))
+                # plt.subplot(121)
+                # plt.imshow(rgbPredicted.detach().cpu().numpy())
+                # plt.title(f'iteartions{i}')
+                # plt.subplot(122)
+                # plt.plot(iters, psnrs)
+                # plt.title("PSNR")
+                # # plt.show()
         print('Done!')
 
 
     def runNerfModel(self, depth_samples_per_ray, encode, pose, chunksize, model):
         ray_origins, ray_directions = self.get_ray_bundle(pose)
+        # print(ray_origins[0][0])
+        # print(ray_directions[0][0])
 
         query_points, depth_values = self.computeQueryPoints(ray_origins, ray_directions, depth_samples_per_ray)
-
+        # print(query_points.shape)
+        # print(query_points[0][0][0])
+        # print('-----------------------')
+        # print(depth_values.shape)
+        # print(depth_values)
+        # print("DEPTH")
+        # print(depth_values)
+        # print(query_points)
         flattened_query_points = query_points.reshape((-1, 3))
-
+        # print("-0-=032-=13-----------------------")
+        # print(flattened_query_points.shape)
+        # print(flattened_query_points)
+        # print("---------ENCODE BEFORE AND AFTER -----------------")
         encded_points = encode(flattened_query_points)
-
+        # print(encded_points.shape)
         batches = self.miniBatches(encded_points, chunksize)
+        print("------------BEFORE AND AFTER BATCHES------------")
+        # print(len(batches))
+        # print((batches[0].shape))
         predictions = []
 
         for batch in batches:
+            # print(batch.shape)
+            # print(batch.dtype)
             predictions.append(model(batch))
+            # print(len(predictions))
+        # print(len(predictions))
+        # print(predictions[0].shape)
         radianceField_flattened = torch.cat(predictions, dim=0)
-
+        # print("RADIANCE FIELD FLATTENED", radianceField_flattened.shape)
+        # print(list(query_points.shape[:-1]))
         unflattened_shape = list(query_points.shape[:-1]) + [4]
+        # print(unflattened_shape)
+        # print(unflattened_shape[0].shape)
         radianceField = torch.reshape(radianceField_flattened, unflattened_shape) # c(r)
+        # print(radianceField.shape)
+        # print(radianceField[0][0][0])
 
         rgbPredicted,depthPredicted, accuracy = self.renderVolumeDensity(radianceField, ray_origins, ray_directions, depth_values)
 
@@ -140,14 +184,30 @@ class Train():
         cumProd[..., 0] = 1
         return cumProd
 
-    def renderVolumeDensity(self, radianceField, ray_origins, depthValues):
+    def renderVolumeDensity(self, radianceField, ray_origins, ray_directions, depthValues):
         sigma = torch.nn.functional.relu(radianceField[..., 3])
+        # print(sigma)
+        print(sigma.shape)
         rgb = torch.sigmoid(radianceField[..., :3])
+        print("RGB")
+        print(rgb.shape)
+        # print(rgb)
+        # print("ONEE10")
         oneE10 = torch.tensor([1e10], dtype=ray_origins.dtype, device=ray_origins.device)
-        dists = torch.cat((depthValues[..., 1:]-depthValues[..., :-1]), oneE10.expand(depthValues[..., :1].shape), dim=-1)
+        print(oneE10.shape)
+        # print(oneE10)
+        dists = torch.cat((depthValues[..., 1:]-depthValues[..., :-1], oneE10.expand(depthValues[..., :1].shape)), dim=-1)
+        # print("DISTS", dists.shape)
+        # print(dists)
         alpha = 1. - torch.exp(-sigma*dists)
-        weights = alpha * self.cumProducts(1. - alpha+1e10)
+        # print("alpha", alpha.shape)
+        # print(alpha)
+        weights = alpha * self.cumProducts(1. - alpha+1e-10)
+        # print("weights", weights.shape)
+        # print(weights)
         rgb_map = (weights[..., None]*rgb).sum(dim=-2)
+        # print("RGB MAP", rgb_map.shape)
+        # print(rgb_map)
         depthMap = (weights*depthValues).sum(dim=-1)
         acc_map = weights.sum(-1)
 
