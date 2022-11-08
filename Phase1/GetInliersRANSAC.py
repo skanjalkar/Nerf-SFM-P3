@@ -8,7 +8,7 @@ import math
 
 class RANSAC():
     def __init__(self) -> None:
-        self.threshold = 0.03
+        self.threshold = 0.01
         self.iterations=30000
         self.bestF = None
         self.maxNumInliers = 0
