@@ -52,12 +52,12 @@ class Train():
             dtype=tensor.dtype,
             device=tensor.device,
         )
-        print(len(encoding[0]))
-        print("Encoding")
+        # print(len(encoding[0]))
+        # print("Encoding")
         for frequency in frequencyBands:
             for function in [torch.sin, torch.cos]:
                 encoding.append(function(tensor*frequency))
-        print(len(encoding[1]))
+        # print(len(encoding[1]))
         return torch.cat(encoding, dim=-1)
 
     def miniBatches(self, ray_bundle, chunksize):
@@ -65,9 +65,9 @@ class Train():
 
     def train(self, num_encoding_functions, depth_samples_per_ray, chunksize):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        # device = "cpu" 
+        # device = "cpu"
         lr = 5e-3
-        num_iterations = 1000
+        num_iterations = 10000
         encode = lambda x: self.positionalEncoding(x, num_encoding_functions=num_encoding_functions)
         model = NerfModel(encoding=num_encoding_functions)
         model = model.to(device)
@@ -76,7 +76,7 @@ class Train():
         # same as def encode(x) -> self.postionalEncoding(x, num_econding_functions)
         # lambda x : x**2 + num_iterations (access to environment or local variables instead of passing them as arguments)
         optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-        # chunksize = 2
+        # chunksize = 16384//64
 
         #seed
         seed = 45
@@ -153,7 +153,7 @@ class Train():
         encded_points = encode(flattened_query_points)
         # print(encded_points.shape)
         batches = self.miniBatches(encded_points, chunksize)
-        print("------------BEFORE AND AFTER BATCHES------------")
+        # print("------------BEFORE AND AFTER BATCHES------------")
         # print(len(batches))
         # print((batches[0].shape))
         predictions = []
