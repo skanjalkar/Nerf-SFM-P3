@@ -129,3 +129,6 @@ dmypy.json
 .pyre/
 
 Phase2/lego-20221031T225340Z-001/
+
+slurm-*
+Phase2/logs
