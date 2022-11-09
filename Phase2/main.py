@@ -5,6 +5,8 @@ from nerf_helpers import *
 import numpy as np
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 to8b = lambda x : (255*np.clip(x,0,1)).astype(np.uint8)
+img2mse = lambda x, y : torch.mean((x - y) ** 2)
+mse2psnr = lambda x : -10. * torch.log(x) / torch.log(torch.Tensor([10.]))
 
 def batchify(fn, chunk):
     def ret(inputs):
@@ -280,7 +282,7 @@ def main():
 
     poses = torch.Tensor(poses).to(device) # convert to tensor
 
-    N_iters = 10000 + 1
+    N_iters = 10002 + 1
     print("Begin!")
 
     start = start + 1
@@ -308,30 +310,29 @@ def main():
         else:
             coords = torch.stack(torch.meshgrid(torch.linspace(0, H-1, H), torch.linspace(0, W-1, W)), -1) # (H, W, 2)
 
-        print(f"Iteration count{i}")
+        # print(f"Iteration count{i}")
         coords = torch.reshape(coords, [-1, 2]) # Leave last column, reshape everything in (H*W, 2)
         # basically represent all coordinates
         select_index = np.random.choice(coords.shape[0], size=[N_rand], replace=False)
         select_coordinates = coords[select_index].long()# choose the random (x, y) points (N_rand, 2)
-        print(select_coordinates.shape)
-        print(rays_origin.shape)
+        # print(select_coordinates.shape)
+        # print(rays_origin.shape)
         rays_origin = rays_origin[select_coordinates[:, 0], select_coordinates[:, 1]] #(N_rand, 3)
         rays_direction = rays_direction[select_coordinates[:, 0], select_coordinates[:, 1]] #(N_rand, 3)
 
         batch_rays = torch.stack([rays_origin, rays_direction], 0) # stack along 0 dim
         target_s = target[select_coordinates[:, 0], select_coordinates[:, 1]] # N_rand, 3
 
-        print("Going to render")
+        # print("Going to render")
         chunk = int(1024*32)
         rgb, disparity, acc, extras = render(H, W, K,chunk=chunk, rays=batch_rays,
                                                 verbose=i<10, retraw=True, **render_kwargs_train)
 
         optimizer.zero_grad()
-        img2mse = lambda x, y : torch.mean((x - y) ** 2)
+
         img_loss = img2mse(rgb, target_s)
         trans = extras['raw'][..., -1]
         loss = img_loss
-        mse2psnr = lambda x : -10. * torch.log(x) / torch.log(torch.Tensor([10.]))
         psnr = mse2psnr(img_loss)
 
         if 'rgb0' in extras:
@@ -349,20 +350,23 @@ def main():
         for param in optimizer.param_groups:
             param['lr'] = new_lrate
 
-        global_step += 1
-
         if i%100==0:
             tqdm.write(f'[TRAIN] Iter: {i} Loss: {loss.item()}, PSNR: {psnr.item()}')
 
 
         if i%10000==0 and i>0:
             # test every 10000 iterations
+            print(f'Begin testing')
             with torch.no_grad():
                 rgbs, disps = render_path(render_poses, hwf, K, int(1024*32), render_kwargs=render_kwargs_test)
             print("Done saving", rgbs.shape, disps.shape)
             moviebase = os.path.join("./logs", "Video", f'"video_spiral_{i}_')
             imageio.mimwrite(moviebase + 'rgb.mp4', to8b(rgbs), fps=30, quality=8)
             imageio.mimwrite(moviebase + 'disp.mp4', to8b(disps/np.max(disps)), fps=30, quality=8)
+
+        global_step += 1
+
+
 if __name__ == "__main__":
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
     main()
