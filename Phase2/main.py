@@ -200,7 +200,7 @@ def render_path(render_poses, hwf, K, chunk, render_kwargs, gt_imgs=None, savedi
         disps.append(disp.cpu().numpy())
 
         if i == 0:
-            print(rgb.shape, disp.shape)
+            # print(rgb.shape, disp.shape)
             if savedir is not None:
                 rgb8 = to8b(rgbs[-1])
                 filename = os.path.join(savedir, '{:3d}.png'.format(i))
@@ -213,20 +213,38 @@ def render_path(render_poses, hwf, K, chunk, render_kwargs, gt_imgs=None, savedi
 def render(H, W, K, chunk=1024*32, rays=None, pose=None, ndc=True, near=0.,
                 far=1., use_viewdirs=False, pose_staticcam=None, **kwargs):
     # print("In render")
-    rays_o, rays_d = rays
+    if pose is not None:
+        rays_o, rays_d = get_rays(H, W, K, pose)
+    else:
+        rays_o, rays_d = rays
 
-    viewdirs = rays_d
-    view_dirs = viewdirs/torch.norm(viewdirs, dim=-1, keepdim=True)
-    viewdirs = torch.reshape(viewdirs, [-1, 3]).float()
+    if use_viewdirs:
+        viewdirs = rays_d
+        if pose_staticcam is not None:
+            rays_o, rays_d = get_rays(H, W, K, pose_staticcam)
+        viewdirs = viewdirs/torch.norm(viewdirs, dim=-1, keepdim=True)
+        # print(viewdirs.shape)
+        viewdirs = torch.reshape(viewdirs, [-1, 3]).float()
+        # print(viewdirs.shape)
 
     sh = rays_d.shape
+
+    # if ndc:
+    #     rays_o, rays_d = ndc_rays(H, W, K[0][0], 1., rays_o)
 
     rays_o = torch.reshape(rays_o, [-1, 3]).float()
     rays_d = torch.reshape(rays_d, [-1, 3]).float()
 
     near, far = near * torch.ones_like(rays_d[...,:1]), far*torch.ones_like(rays_d[..., :1])
-    rays = torch.cat([rays_o, rays_d, near, far, view_dirs], -1) # concatenate along -1 dim
+    # print(rays_o.shape)
+    # print(rays_d.shape)
+    # print(far.shape)
+    # print(near.shape)
+    # print(viewdirs.shape)
+    rays = torch.cat([rays_o, rays_d, near, far], -1) # concatenate along -1 dim
     # print("Going to batchify rays")
+    if use_viewdirs:
+        rays = torch.cat([rays, viewdirs], -1)
     all_ret = batchify_rays(rays, chunk, **kwargs)
 
     for k in all_ret:
@@ -282,7 +300,7 @@ def main():
 
     poses = torch.Tensor(poses).to(device) # convert to tensor
 
-    N_iters = 10002 + 1
+    N_iters = 200000 + 1
     print("Begin!")
 
     start = start + 1
@@ -354,13 +372,14 @@ def main():
             tqdm.write(f'[TRAIN] Iter: {i} Loss: {loss.item()}, PSNR: {psnr.item()}')
 
 
-        if i%10000==0 and i>0:
+        if i%25000==0 and i>0:
             # test every 10000 iterations
             print(f'Begin testing')
             with torch.no_grad():
                 rgbs, disps = render_path(render_poses, hwf, K, int(1024*32), render_kwargs=render_kwargs_test)
             print("Done saving", rgbs.shape, disps.shape)
-            moviebase = os.path.join("./logs", "Video", f'"video_spiral_{i}_')
+
+            moviebase = os.path.join("./Phase2", "logs", "Video", f'"video_spiral_{i}_')
             imageio.mimwrite(moviebase + 'rgb.mp4', to8b(rgbs), fps=30, quality=8)
             imageio.mimwrite(moviebase + 'disp.mp4', to8b(disps/np.max(disps)), fps=30, quality=8)
 
