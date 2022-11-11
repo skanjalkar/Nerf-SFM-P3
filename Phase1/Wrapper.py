@@ -229,36 +229,35 @@ def main():
         print("performing Linear Triangulation to obtain 3d equiv for remaining 2d points")
         # find the 2d-3d mapping for the remaining image points in the new image by doing triangulation
 
-        x_cur_remaining=remaining_2d_3d_linear[:,0:2]
-        x_new_remaining=remaining_2d_3d_linear[:,2:4]
+        x_cur_remaining=remaining_2d_2d[:,0:2]
+        x_new_remaining=remaining_2d_2d[:,2:4]
         X_lin_tri_remaining = LinearTrinagulation(P_current, C_non_pnp, R_non_pnp, K, x_cur_remaining,x_new_remaining)
         X_lin_tri_remaining = X_lin_tri_remaining.reshape((remaining_2d_2d.shape[0], 3))
 
-        #
-        remaining_2d_3d_linear = remaining_2d_2d[:, 2:4]
+    
         print("(linear)points before adding remaining corresp - {}".format(x_X_new_image.shape))
-        x_X_new_image_complete = np.vstack((x_X_new_image, np.hstack((remaining_2d_3d_linear, X_lin_tri_remaining))))
-        print("(linear)points after adding remaining corresp - {}".format(x_X_new_image_complete.shape))
+        x_X_new_image_linear = np.vstack((x_X_new_image, np.hstack((x_new_remaining, X_lin_tri_remaining))))
+        print("(linear)points after adding remaining corresp - {}".format(x_X_new_image_linear.shape))
 
+        
         # error calculation and storing
-        reproj_errors = reprojection_error_estimation(x_X_new_image_complete[:, 0:2],x_X_new_image_complete[:, 2:], P_non_pnp)
+        reproj_errors = reprojection_error_estimation(x_X_new_image_linear[:, 0:2],x_X_new_image_linear[:, 2:], P_non_pnp)
         mean_proj_error[new_img_num].append(('LinTri_compleyte points', np.mean(reproj_errors)))
 
     ##---------------NON LINEAR TRIANGULATION FOR REMAINIG POINTS-------------------
         print("performing Non-Linear Triangulation to obtain 3d equiv for remaining 2d points")
-        X_non_lin_tri = Non_Linear_Triangulation(P_current, P_non_pnp, X_lin_tri_remaining, remaining_2d_3d_linear)
+        X_non_lin_tri = Non_Linear_Triangulation(K,P_current, P_non_pnp, X_lin_tri_remaining, remaining_2d_2d)
         X_non_lin_tri = X_non_lin_tri.reshape((remaining_2d_2d.shape[0], 3))
 
-        remaining_2d_3d = remaining_2d_2d[:, 2:4]
         print("(Nlinear)points before adding remaining corresp - {}".format(x_X_new_image.shape))
-        x_X_new_image = np.vstack((x_X_new_image, np.hstack((remaining_2d_3d, X_non_lin_tri))))
-        print("(Nlinear)points after adding remaining corresp - {}".format(x_X_new_image.shape))
+        x_X_new_image_non_linear = np.vstack((x_X_new_image, np.hstack((remaining_2d_2d[:, 2:4], X_non_lin_tri))))
+        print("(Nlinear)points after adding remaining corresp - {}".format(x_X_new_image_non_linear.shape))
 
         # print reprojection error after non-linear triangulation
         pts_img_all = x_X_new_image[:, 0:2]
         X_all = x_X_new_image[:, 2:]
-        reproj_errors = reprojection_error_estimation(pts_img_all, P_non_pnp, X_all)
-        mean_proj_error[new_img_num].append(('NonLinTri', np.mean(reproj_errors)))
+        reproj_errors = reprojection_error_estimation(x_X_new_image_non_linear[:,:2],x_X_new_image_non_linear[:,2:], P_non_pnp)
+        mean_proj_error[new_img_num].append(('NonLinTri_complete_points', np.mean(reproj_errors)))
 
         # store the current pose after non linear pnp
         camera_poses_dict[new_img_num] = np.hstack((R_non_pnp, C_non_pnp.reshape((3, 1))))
