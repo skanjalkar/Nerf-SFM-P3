@@ -21,7 +21,7 @@ cwd = Path.cwd()
 def readCalibrationMatrix(path, windows=False):
     '''Read the calibration matrix'''
 
-    path=r"C:\Users\khiza\OneDrive\Documents\GitHub\Nerf-Swift-P3\Data\MatchingData\calibration.txt"
+    path=os.path.join(path,"calibration.txt")
     with open(path, 'r') as f:
         contents = f.read()
 
@@ -50,7 +50,7 @@ def drawlines(img1,img2,lines,pts1,pts2):
 
 def main():
     Parser = argparse.ArgumentParser()
-    Parser.add_argument('--data_path', default='../Data/MatchingData/', help='Data path')
+    Parser.add_argument('--data_path', default=os.path.join(os.getcwd(),"Data","MatchingData"), help='Data path')
     Parser.add_argument('--findImgPair', default=False, type=bool, help='To get the matches for all the pairs')
     Parser.add_argument('--os', default=True, type=bool, help="If os is Linux or mac type False")
     Args = Parser.parse_args()
@@ -313,7 +313,5 @@ def main():
     print(mean_proj_error)
 if __name__ == "__main__":
     a=os.path.join(os.getcwd(),"Data")
-
-    nerf_path=os.getcwd()
     print(a)
-    # main()
+    main()
