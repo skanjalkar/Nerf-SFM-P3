@@ -1,16 +1,16 @@
 import numpy as np
 from scipy import optimize
 
-def Non_Linear_Triangulation(K,P1, P2, X_estimate, inlier_points, X_updated_list = []):
+def Non_Linear_Triangulation(K,P1, P2, X_estimate, inliex_cur_x_new, X_updated_list = []):
     '''
     P1: Projection matrix of camera 1
     P2: Projection matrix of camera 2
     X_estimate: 3D world coordinate approximations obtained from linear triangulation
-    inlier_points: image coordinates (x and x')
+    x_cur_x_new: 2d correposndences of pairs of images of nx4 size . Example row=[x1,y1,x2,y2]
     '''
     # Getting matching points in the image
-    x_pts = inlier_points[:, 0:2]
-    x_dash_pts = inlier_points[:, 2:4]
+    x_pts = inliex_cur_x_new[:, 0:2]
+    x_dash_pts = inliex_cur_x_new[:, 2:4]
 
     for point1, point2, X in zip(x_pts, x_dash_pts, X_estimate):
         X = X.reshape(X.shape[0],-1)

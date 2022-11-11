@@ -12,6 +12,7 @@ from pnp_ransac import pnp_ransac
 from pnp_ransac import reprojection_error_estimation
 from NonLinearPnP import PNP_nonlinear
 from BundleAdjustment import bundle_adjustment
+from LinearTriangulation import LinearTrinagulation
 
 def readCalibrationMatrix(path):
     '''Read the calibration matrix'''
@@ -189,12 +190,12 @@ def main():
         xcur_xnext=xcur_xnext[:4,:]
         
         
-        # now we try to get x_X mapping for new image
+        #  NOW WE GET : x_X mapping for new image
         #x_X_new_image is of the format [x1,y1,X,Y,Z]
         x_X_new_image, remaining_2d_2d = x_X_map_creator(x_X_cur_image, xcur_xnext)
         print("shape of 2d-3d correspondences {}".format(np.shape(x_X_new_image)))
 
-        ##.............................PnP RANSAC...........................'''
+        ##------------PnP RANSAC----------------------------
         print("PnP RANSAC to refine the poses")
         # x_list_new_image=x_X_new_image[:2,:]
         # X_list_new_image=x_X_new_image[2:,:]
@@ -204,41 +205,47 @@ def main():
         P_pnp = np.dot(np.dot(K, R_pnp), np.hstack((np.identity(3), -C_pnp)))
         x_pnp = x_X_new_image[:, 0:2]
         X_pnp = x_X_new_image[:, 2:5]
-        reproj_errors = reprojection_error_estimation(x_pnp, P_pnp, X_pnp)
-        mean_proj_error[new_img_num] = [('LinPnP', np.mean(reproj_errors))]
-        '''.............................Non-linear PnP...........................'''
+       
+        #error estimation and storing
+        reproj_errors = reprojection_error_estimation(x_pnp, X_pnp,P_pnp)
+        mean_proj_error[new_img_num] = [('Linear_PnP', np.mean(reproj_errors))]
+        
+        
+        ###---------------NON LINEAR PNP-------------------
         print("performing Non-linear PnP to obtain optimal pose")
-        pose_non_linear = PNP_nonlinear(K, pose_pnp_ransac, pnp_inlier_corresp)
+        
+        
+        pose_non_linear = PNP_nonlinear(x_pnp,X_pnp,K, R_pnp, C_pnp)
         R_non_pnp = pose_non_linear[:, 0:3]
         C_non_pnp = pose_non_linear[:, 3].reshape((3, 1))
-
         P_non_pnp=np.dot(np.dot(K, R_non_pnp), np.hstack((np.identity(3), -C_non_pnp)))
         
         # error is calculated for the same set of image and 3d points but with refined pose
         reproj_errors = reprojection_error_estimation(x_pnp,X_pnp,P_non_pnp)
         mean_proj_error[new_img_num].append(('NonLinPnP', np.mean(reproj_errors)))
 
-        '''.............................Linear triangulation...........................'''
+
+        ###---------------LINEAR TRIANGULATION FOR REMAINIG POINTS-------------------
         print("performing Linear Triangulation to obtain 3d equiv for remaining 2d points")
         # find the 2d-3d mapping for the remaining image points in the new image by doing triangulation
-        X_lin_tri = linear_triagulation(P_current, C_non_pnp, R_non_pnp, K, remaining_2d_2d)
-        X_lin_tri = X_lin_tri.reshape((remaining_2d_2d.shape[0], 3))
+
+        x_cur_remaining=remaining_2d_3d_linear[:,0:2]
+        x_new_remaining=remaining_2d_3d_linear[:,2:4]
+        X_lin_tri_remaining = LinearTrinagulation(P_current, C_non_pnp, R_non_pnp, K, x_cur_remaining,x_new_remaining)
+        X_lin_tri_remaining = X_lin_tri_remaining.reshape((remaining_2d_2d.shape[0], 3))
 
         remaining_2d_3d_linear = remaining_2d_2d[:, 2:4]
         print("(linear)points before adding remaining corresp - {}".format(x_X_new_image.shape))
-        new_img_2d_3d_linear = np.vstack((x_X_new_image, np.hstack((remaining_2d_3d_linear, X_lin_tri))))
-        print("(linear)points after adding remaining corresp - {}".format(new_img_2d_3d_linear.shape))
+        x_X_new_image_complete = np.vstack((x_X_new_image, np.hstack((remaining_2d_3d_linear, X_lin_tri_remaining))))
+        print("(linear)points after adding remaining corresp - {}".format(x_X_new_image_complete.shape))
 
-        # print reprojection error after non-linear triangulation
-        pts_img_all_linear = new_img_2d_3d_linear[:, 0:2]
-        X_all_linear = new_img_2d_3d_linear[:, 2:]
-        reproj_errors = compute_reproj_err_all(pts_img_all_linear, P_non_pnp, X_all_linear)
-        mean_proj_error[new_img_num].append(('LinTri', np.mean(reproj_errors)))
+        # error calculation and storing
+        reproj_errors = reprojection_error_estimation(x_X_new_image_complete[:, 0:2],x_X_new_image_complete[:, 2:], P_non_pnp)
+        mean_proj_error[new_img_num].append(('LinTri_compleyte points', np.mean(reproj_errors)))
 
-
-        '''.............................Non-Linear triangulation...........................'''
+    ##---------------NON LINEAR TRIANGULATION FOR REMAINIG POINTS-------------------
         print("performing Non-Linear Triangulation to obtain 3d equiv for remaining 2d points")
-        X_non_lin_tri = nonlinear_triang(P_current, P_non_pnp, X_lin_tri, remaining_2d_2d, K)
+        X_non_lin_tri = Non_Linear_Triangulation(P_current, P_non_pnp, X_lin_tri_remaining, remaining_2d_3d_linear)
         X_non_lin_tri = X_non_lin_tri.reshape((remaining_2d_2d.shape[0], 3))
 
         remaining_2d_3d = remaining_2d_2d[:, 2:4]
@@ -249,7 +256,7 @@ def main():
         # print reprojection error after non-linear triangulation
         pts_img_all = x_X_new_image[:, 0:2]
         X_all = x_X_new_image[:, 2:]
-        reproj_errors = compute_reproj_err_all(pts_img_all, P_non_pnp, X_all)
+        reproj_errors = reprojection_error_estimation(pts_img_all, P_non_pnp, X_all)
         mean_proj_error[new_img_num].append(('NonLinTri', np.mean(reproj_errors)))
 
         # store the current pose after non linear pnp
@@ -276,8 +283,8 @@ def main():
         R_ba = pose_set_opt[new_img_num][:, 0:3]
         C_ba = pose_set_opt[new_img_num][:, 3]
         X_all_ba = X_set_opt[index_start:index_end].reshape((X_all.shape[0], 3))
-        M_ba = misc_funcs.get_projection_matrix(K, R_ba, C_ba)
-        reproj_errors = compute_reproj_err_all(pts_img_all, M_ba, X_all_ba)
+        P_ba = np.dot(np.dot(K, R_ba), np.hstack((np.identity(3), -C_ba)))
+        reproj_errors = reprojection_error_estimation(pts_img_all, P_ba, X_all_ba)
         mean_proj_error[new_img_num].append(('BA', np.mean(reproj_errors)))
 
 
