@@ -20,13 +20,8 @@ cwd = Path.cwd()
 
 def readCalibrationMatrix(path, windows=False):
     '''Read the calibration matrix'''
-    if windows:
-        dirname = Path(path)
-        path = dirname / "calibration.txt"
-        path = PureWindowsPath(path)
-    else:
-        path = path + "calibration.txt"
-    print(path)
+
+    path=r"C:\Users\khiza\OneDrive\Documents\GitHub\Nerf-Swift-P3\Data\MatchingData\calibration.txt"
     with open(path, 'r') as f:
         contents = f.read()
 
@@ -64,7 +59,7 @@ def main():
     windowsos = Args.os
     # print(sys.path)
     if findImgPair:
-        createMatchestxt(data_path)
+        createMatchestxt(os.path.join(os.getcwd(),"Data"))
     # get the camera calibration matrix
     K = readCalibrationMatrix(data_path, windowsos)
 
@@ -317,4 +312,8 @@ def main():
     # plot_funcs.bundle_adjustment_op(pose_set_opt, X_set_opt)
     print(mean_proj_error)
 if __name__ == "__main__":
-    main()
+    a=os.path.join(os.getcwd(),"Data")
+
+    nerf_path=os.getcwd()
+    print(a)
+    # main()

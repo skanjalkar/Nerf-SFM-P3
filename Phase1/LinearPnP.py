@@ -36,7 +36,7 @@ def PNP_linear(x_list,X_list,K):
         A_one_point=np.dot(skew(x),A)
         A=np.vstack(A,A_one_point)
        
-    A = np.float32(A[1:,:])
+    A = np.float32(A)
     U,D,V_t = np.linalg.svd(A)
 
     V = V_t.T

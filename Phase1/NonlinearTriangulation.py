@@ -3,10 +3,14 @@ from scipy import optimize
 
 def Non_Linear_Triangulation(K,P1, P2, X_estimate, inliex_cur_x_new, X_updated_list = []):
     '''
+    Inputs:
     P1: Projection matrix of camera 1
     P2: Projection matrix of camera 2
     X_estimate: 3D world coordinate approximations obtained from linear triangulation
     x_cur_x_new: 2d correposndences of pairs of images of nx4 size . Example row=[x1,y1,x2,y2]
+    
+    Outputs:
+    
     '''
     # Getting matching points in the image
     x_pts = inliex_cur_x_new[:, 0:2]
