@@ -6,10 +6,23 @@ import time
 
 from scipy.spatial.transform import Rotation as trans
 
-def bundle_adjustment(pose_set, X_points, map_2d_3d, K):
+def bundle_adjustment(pose_set, X_points, x_Xindex_mapping, K):
+    '''
+    Input arguments--
+    
+    pose_set         : It is a dictionary containing where the key= img no, val=3x4 matrix (where first 3 columns are R and the last column is C)
+    X_points         : A nx3 matrix where each row is [X,Y,Z]
+    x_Xindex_mapping : a dictionary where key: iamge no val= nx3 matrix (each row: [x,y,X_index])
+    K                : Intrinsinc camera matrix
+
+    Outputs ---
+
+    optimized pose set
+    optimized X set
+    '''
 
     #getting parameters to optimize on
-    n_cam, n_3d, indices_3d_pts, img_pts_2d, indices_cam, x0 = optimization_parameters(pose_set, X_points, map_2d_3d)
+    n_cam, n_3d, indices_3d_pts, img_pts_2d, indices_cam, x0 = optimization_parameters(pose_set, X_points, x_Xindex_mapping)
 
     #getting visibility matrix
     A=sparsity_matrix(n_cam, n_3d, indices_cam, indices_3d_pts)
@@ -45,7 +58,7 @@ def optimization_parameters(pose_set, X_points, map_2d_3d):
     # Appending parametrs for each pose
     for i in pose_set.keys():
 
-        transform=trans.from_matrix(pose_set[k][:, 0:3])
+        transform=trans.from_matrix(pose_set[i][:, 0:3])
         quaternion=transform.as_quat()
         camera_point = pose_set[i][:, 3]        
         params = np.append(params, quaternion.reshape(-1), axis=0)

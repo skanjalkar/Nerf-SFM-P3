@@ -173,7 +173,7 @@ def main():
     X_set=np.copy(X_list)
 
 
-    x_Xindex_mapping = {}
+    x_Xindex_mapping = {} # a dictionary where key: iamge no val= nx3 matrix (each row: [x,y,X_index])
     x_Xindex_mapping[1] = zip(x_X_map_dict[1][:, 0:2], range(X_set.shape[0]))
     x_Xindex_mapping[2] = zip(x_X_map_dict[2][:, 0:2], range(X_set.shape[0]))
 
@@ -278,12 +278,15 @@ def main():
         # plot_funcs.plot_camera_poses(camera_poses_dict, x_X_map_dict, save=True)
 
 
-        ##-----------------------BUNDLE ADJUSTMENT
+        ##-----------------------BUNDLE ADJUSTMENT-----------------------
+        # initilaization for BA
         index_start = X_set.shape[0]
         index_end = X_set.shape[0] + X_non_lintriang_all.shape[0]
         x_Xindex_mapping[new_img_num] = zip(x_non_lintriang_all, range(index_start, index_end))
-        X_set = np.append(X_set, x_non_lintriang_all, axis=0)
+        X_set = np.append(X_set, X_non_lintriang_all, axis=0)
 
+        
+        #BA implemntation refereced from https://scipy-cookbook.readthedocs.io/items/bundle_adjustment.html 
         print("doing Bundle Adjustment --> ")
         pose_set_opt, X_set_opt = bundle_adjustment(camera_poses_dict, X_set, x_Xindex_mapping, K)
         print("keys --> {}".format(pose_set_opt.keys()))
@@ -293,11 +296,11 @@ def main():
         C_ba = pose_set_opt[new_img_num][:, 3]
         X_all_ba = X_set_opt[index_start:index_end].reshape((x_non_lintriang_all.shape[0], 3))
         P_ba = np.dot(np.dot(K, R_ba), np.hstack((np.identity(3), -C_ba)))
-        reproj_errors = reprojection_error_estimation(x_non_lintriang_all, P_ba, X_all_ba)
+        reproj_errors = reprojection_error_estimation(x_non_lintriang_all, X_all_ba,P_ba)
         mean_proj_error[new_img_num].append(('BA', np.mean(reproj_errors)))
 
 
-        # make X_set = X_set_opt and send it for further iterations ->
+        # make X_set = X_set_opt and send it for further iterations...
         X_set = X_set_opt
 
         # Save the optimal correspondences (2D-3D) and the optimal poses for next iteration
