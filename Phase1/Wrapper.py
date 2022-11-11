@@ -13,11 +13,19 @@ from pnp_ransac import reprojection_error_estimation
 from NonLinearPnP import PNP_nonlinear
 from BundleAdjustment import bundle_adjustment
 from LinearTriangulation import LinearTrinagulation
+from pathlib import Path, PureWindowsPath
+import pry
 
-def readCalibrationMatrix(path):
+cwd = Path.cwd()
+
+def readCalibrationMatrix(path, windows=False):
     '''Read the calibration matrix'''
+    if windows:
+        path = PureWindowsPath(path / "calibration.txt")
+    else:
+        path = path + "calibration.txt"
     print(path)
-    with open(path+"calibration.txt", 'r') as f:
+    with open(path, 'r') as f:
         contents = f.read()
 
     K = []
@@ -47,10 +55,11 @@ def main():
     Parser = argparse.ArgumentParser()
     Parser.add_argument('--data_path', default='../Data/MatchingData/', help='Data path')
     Parser.add_argument('--findImgPair', default=False, type=bool, help='To get the matches for all the pairs')
+    Parser.add_argument('--os', default=True, type=bool, help="If os is Linux or mac type False")
     Args = Parser.parse_args()
     data_path = Args.data_path
     findImgPair = Args.findImgPair
-    print(sys.path)
+    # print(sys.path)
     if findImgPair:
         createMatchestxt(data_path)
     # get the camera calibration matrix
@@ -119,7 +128,7 @@ def main():
     mean_proj_error[2] = [('Linear_Triangulation', np.mean(reproj_errors))]
 
     #plotting linear triangulation
-    
+
     #------------------------------------------------
     #NON Linear trinagulation
     print("Finished Linear triangulation\nBeginning Non Linear triangulation")
@@ -144,12 +153,12 @@ def main():
     camera_poses_dict[1] = np.identity(4)[0:3, :]
     camera_poses_dict[2] = np.hstack((bestR, bestC.reshape(3,1)))
 
-    
+
     image_correspondences = [[2, 3], [3, 4], [4, 5], [5, 6]]
     x_X_map_dict = {} #This is in the format x_X_map[1]= [x1,y1,X,Y,Z]
- 
+
     # In this section we are trying to map each image's 2D points(x) with a global set of 3D points (X)
-    
+
     #For image 1
     x_X_image_1 = inlierPoints[:, 0:2]
     x_X_image_1 = np.hstack((x_X_image_1, X_list))
@@ -170,7 +179,7 @@ def main():
 
     # estimate pose for the remaining cams
     for _, a_correspondence in enumerate(image_correspondences):
-        
+
         current_image = a_correspondence[0]
         new_img_num = a_correspondence[1]
         img_pair = str(current_image)+str(new_img_num)
@@ -188,8 +197,8 @@ def main():
         correspondence_file_name=f"matches{current_image}{new_img_num}"
         xcur_xnext=imgHelper.readPoints(correspondence_file_name)
         xcur_xnext=xcur_xnext[:4,:]
-        
-        
+
+
         #  NOW WE GET : x_X mapping for new image
         #x_X_new_image is of the format [x1,y1,X,Y,Z]
         x_X_new_image, remaining_2d_2d = x_X_map_creator(x_X_cur_image, xcur_xnext)
@@ -205,21 +214,21 @@ def main():
         P_pnp = np.dot(np.dot(K, R_pnp), np.hstack((np.identity(3), -C_pnp)))
         x_pnp = x_X_new_image[:, 0:2]
         X_pnp = x_X_new_image[:, 2:5]
-       
+
         #error estimation and storing
         reproj_errors = reprojection_error_estimation(x_pnp, X_pnp,P_pnp)
         mean_proj_error[new_img_num] = [('Linear_PnP', np.mean(reproj_errors))]
-        
-        
+
+
         ###---------------NON LINEAR PNP-------------------
         print("performing Non-linear PnP to obtain optimal pose")
-        
-        
+
+
         pose_non_linear = PNP_nonlinear(x_pnp,X_pnp,K, R_pnp, C_pnp)
         R_non_pnp = pose_non_linear[:, 0:3]
         C_non_pnp = pose_non_linear[:, 3].reshape((3, 1))
         P_non_pnp=np.dot(np.dot(K, R_non_pnp), np.hstack((np.identity(3), -C_non_pnp)))
-        
+
         # error is calculated for the same set of image and 3d points but with refined pose
         reproj_errors = reprojection_error_estimation(x_pnp,X_pnp,P_non_pnp)
         mean_proj_error[new_img_num].append(('NonLinPnP', np.mean(reproj_errors)))
@@ -266,7 +275,7 @@ def main():
         # plot_funcs.plot_reproj_points(images[new_img_num-1], new_img_num, np.float32(pts_img_all), np.float32(pts_img_reproj_all), save=True)
         # print("plotting all the camera poses and their respective correspondences\n")
         x_X_map_dict[new_img_num] = np.hstack((pts_img_all, X_all))
-        plot_funcs.plot_camera_poses(camera_poses_dict, x_X_map_dict, save=True)
+        # plot_funcs.plot_camera_poses(camera_poses_dict, x_X_map_dict, save=True)
 
 
         # do bundle adjustment
@@ -299,7 +308,7 @@ def main():
         print("......................................")
 
     # plotting the output of BA
-    plot_funcs.bundle_adjustment_op(pose_set_opt, X_set_opt)
+    # plot_funcs.bundle_adjustment_op(pose_set_opt, X_set_opt)
     print(mean_proj_error)
 if __name__ == "__main__":
     main()

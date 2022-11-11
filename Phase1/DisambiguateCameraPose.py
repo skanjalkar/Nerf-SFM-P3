@@ -29,11 +29,11 @@ class Disambiguate():
         x1 = self.inliers[:, 0:2]
         x2 = self.inliers[:, 2:4]
         bestX, bestC, bestR = None, None, None
-        linTriangle = LinearTriangulation(self.K)
+        # linTriangle = LinearTriangulation(self.K)
         index = 0
         for r2, c2 in zip(R2, C2):
             c2 = c2.reshape((3, 1))
-            X2 = linTriangle.LinearTrinagulation(P1, c2, r2, x1, x2)
+            X2 = LinearTrinagulation(P1, c2, r2, x1, x2)
             # X2 = linTriangle.LinearTriangulation(C1, R1, c2, r2, x1, x2)
             # pry()
             count = self.chiralityCheck(X2, r2, c2)
