@@ -234,6 +234,7 @@ def main():
         X_lin_tri_remaining = LinearTrinagulation(P_current, C_non_pnp, R_non_pnp, K, x_cur_remaining,x_new_remaining)
         X_lin_tri_remaining = X_lin_tri_remaining.reshape((remaining_2d_2d.shape[0], 3))
 
+        #
         remaining_2d_3d_linear = remaining_2d_2d[:, 2:4]
         print("(linear)points before adding remaining corresp - {}".format(x_X_new_image.shape))
         x_X_new_image_complete = np.vstack((x_X_new_image, np.hstack((remaining_2d_3d_linear, X_lin_tri_remaining))))
