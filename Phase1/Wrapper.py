@@ -14,7 +14,7 @@ from NonLinearPnP import PNP_nonlinear
 from BundleAdjustment import bundle_adjustment
 from LinearTriangulation import LinearTrinagulation
 from pathlib import Path, PureWindowsPath
-import pry
+
 
 cwd = Path.cwd()
 
@@ -266,8 +266,8 @@ def main():
         print("(Nlinear)points after adding remaining corresp - {}".format(x_X_new_image_non_linear.shape))
 
         # print reprojection error after non-linear triangulation
-        pts_img_all = x_X_new_image[:, 0:2]
-        X_all = x_X_new_image[:, 2:]
+        x_non_lintriang_all = x_X_new_image_non_linear[:, 0:2]
+        X_non_lintriang_all = x_X_new_image_non_linear[:, 2:]
         reproj_errors = reprojection_error_estimation(x_X_new_image_non_linear[:,:2],x_X_new_image_non_linear[:,2:], P_non_pnp)
         mean_proj_error[new_img_num].append(('NonLinTri_complete_points', np.mean(reproj_errors)))
 
@@ -277,15 +277,15 @@ def main():
         # plotting reprojected points
         # plot_funcs.plot_reproj_points(images[new_img_num-1], new_img_num, np.float32(pts_img_all), np.float32(pts_img_reproj_all), save=True)
         # print("plotting all the camera poses and their respective correspondences\n")
-        x_X_map_dict[new_img_num] = np.hstack((pts_img_all, X_all))
+        x_X_map_dict[new_img_num] = np.hstack((x_non_lintriang_all, X_non_lintriang_all))
         # plot_funcs.plot_camera_poses(camera_poses_dict, x_X_map_dict, save=True)
 
 
-        # do bundle adjustment
+        ##-----------------------BUNDLE ADJUSTMENT
         index_start = X_set.shape[0]
-        index_end = X_set.shape[0] + X_all.shape[0]
-        x_Xindex_mapping[new_img_num] = zip(pts_img_all, range(index_start, index_end))
-        X_set = np.append(X_set, X_all, axis=0)
+        index_end = X_set.shape[0] + X_non_lintriang_all.shape[0]
+        x_Xindex_mapping[new_img_num] = zip(x_non_lintriang_all, range(index_start, index_end))
+        X_set = np.append(X_set, x_non_lintriang_all, axis=0)
 
         print("doing Bundle Adjustment --> ")
         pose_set_opt, X_set_opt = bundle_adjustment(camera_poses_dict, X_set, x_Xindex_mapping, K)
@@ -294,9 +294,9 @@ def main():
         # compute reproj error after BA
         R_ba = pose_set_opt[new_img_num][:, 0:3]
         C_ba = pose_set_opt[new_img_num][:, 3]
-        X_all_ba = X_set_opt[index_start:index_end].reshape((X_all.shape[0], 3))
+        X_all_ba = X_set_opt[index_start:index_end].reshape((x_non_lintriang_all.shape[0], 3))
         P_ba = np.dot(np.dot(K, R_ba), np.hstack((np.identity(3), -C_ba)))
-        reproj_errors = reprojection_error_estimation(pts_img_all, P_ba, X_all_ba)
+        reproj_errors = reprojection_error_estimation(x_non_lintriang_all, P_ba, X_all_ba)
         mean_proj_error[new_img_num].append(('BA', np.mean(reproj_errors)))
 
 
@@ -304,7 +304,7 @@ def main():
         X_set = X_set_opt
 
         # Save the optimal correspondences (2D-3D) and the optimal poses for next iteration
-        x_X_map_dict[new_img_num] = np.hstack((pts_img_all, X_all_ba))
+        x_X_map_dict[new_img_num] = np.hstack((x_non_lintriang_all, X_all_ba))
         # pose_set[new_img_num] = np.hstack((R_ba, C_ba.reshape((3, 1))))
         camera_poses_dict = pose_set_opt
 
