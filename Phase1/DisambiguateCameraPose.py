@@ -14,7 +14,7 @@ class Disambiguate():
         r3 = R[2]
         for x in X:
             # pry()
-            if(np.dot(r3, x-C))>0:
+            if(np.dot(r3, x-C).any())>0:
                 count += 1
         return count
 
@@ -39,6 +39,7 @@ class Disambiguate():
             count = self.chiralityCheck(X2, r2, c2)
             plotHelper.plotTriangle(X2, c2, r2, index)
             if count > maxCount:
+                print(count)
                 maxCount = count
                 bestR = r2
                 bestC = c2
