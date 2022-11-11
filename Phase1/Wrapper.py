@@ -21,7 +21,9 @@ cwd = Path.cwd()
 def readCalibrationMatrix(path, windows=False):
     '''Read the calibration matrix'''
     if windows:
-        path = PureWindowsPath(path / "calibration.txt")
+        dirname = Path(path)
+        path = dirname / "calibration.txt"
+        path = PureWindowsPath(path)
     else:
         path = path + "calibration.txt"
     print(path)
@@ -59,11 +61,12 @@ def main():
     Args = Parser.parse_args()
     data_path = Args.data_path
     findImgPair = Args.findImgPair
+    windowsos = Args.os
     # print(sys.path)
     if findImgPair:
         createMatchestxt(data_path)
     # get the camera calibration matrix
-    K = readCalibrationMatrix(data_path)
+    K = readCalibrationMatrix(data_path, windowsos)
 
     P1 = np.dot(K, np.hstack((np.identity(3), np.zeros((3,1)))))
     R1, C1 = P1[:3, :3], P1[:, -1]
@@ -243,12 +246,12 @@ def main():
         X_lin_tri_remaining = LinearTrinagulation(P_current, C_non_pnp, R_non_pnp, K, x_cur_remaining,x_new_remaining)
         X_lin_tri_remaining = X_lin_tri_remaining.reshape((remaining_2d_2d.shape[0], 3))
 
-    
+
         print("(linear)points before adding remaining corresp - {}".format(x_X_new_image.shape))
         x_X_new_image_linear = np.vstack((x_X_new_image, np.hstack((x_new_remaining, X_lin_tri_remaining))))
         print("(linear)points after adding remaining corresp - {}".format(x_X_new_image_linear.shape))
 
-        
+
         # error calculation and storing
         reproj_errors = reprojection_error_estimation(x_X_new_image_linear[:, 0:2],x_X_new_image_linear[:, 2:], P_non_pnp)
         mean_proj_error[new_img_num].append(('LinTri_compleyte points', np.mean(reproj_errors)))
