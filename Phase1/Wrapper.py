@@ -49,7 +49,7 @@ def main():
     Args = Parser.parse_args()
     data_path = Args.data_path
     findImgPair = Args.findImgPair
-
+    print(sys.path)
     if findImgPair:
         createMatchestxt(data_path)
     # get the camera calibration matrix
