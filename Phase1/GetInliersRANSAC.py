@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 from EstimateFundamentalMatrix import *
-import pry
 import random
 import sys
 import math

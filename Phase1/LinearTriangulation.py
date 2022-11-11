@@ -1,5 +1,5 @@
 import numpy as np
-import pry
+
 
 class LinearTriangulation():
     def __init__(self, K) -> None:

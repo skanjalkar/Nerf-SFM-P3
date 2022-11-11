@@ -3,7 +3,7 @@ import numpy as np
 import random
 
 
-def reprojection_error_estimation(x,X,P,ret=False):
+def reprojection_error_estimation(x,X,P,get_val=False):
     '''
     Inputs:
     x - 2D points , size: 3X1
@@ -30,17 +30,16 @@ def reprojection_error_estimation(x,X,P,ret=False):
     error= error**2
     error= np.sqrt(np.sum(error, axis=1))
 
-    if(ret):
+    if get_val:
         return error, x_hat
-
     return error
 
 
 def pnp_ransac(correspondences,K, thresh = 20,max_inliers=0):
     '''
     Inputs:
-    x_list - 2D points , size: 3X1
-    X_list - 3D points, size: 3X1
+    correspondences - A nx5 matrix where each row is [x,y,X,Y,Z]
+    threshold - Conditionally 10000
     K - Intrinsic matrix, size: 3X3
 
     Outputs:

@@ -1,6 +1,6 @@
 import numpy as np
 
-def x_X_map(x_X_cur_image_map, xcur_xnew_map):
+def x_X_map_creator(x_X_cur_image_map, xcur_xnew_map):
     
     #initializing
     x_X_new_img_map = []

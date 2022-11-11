@@ -1,15 +1,21 @@
 import argparse
 import numpy as np
 from Helper.ImageHelper import *
+from Helper.Misc import x_X_map_creator
 from Helper.createPairMatches import *
 from GetInliersRANSAC import *
 from EssentialMatrixFromFundamanentalMatrix import *
 from ExtractCameraPose import *
 from DisambiguateCameraPose import *
 from NonlinearTriangulation import Non_Linear_Triangulation
+from pnp_ransac import pnp_ransac
+from pnp_ransac import reprojection_error_estimation
+from NonLinearPnP import PNP_nonlinear
+from BundleAdjustment import bundle_adjustment
 
 def readCalibrationMatrix(path):
     '''Read the calibration matrix'''
+    print(path)
     with open(path+"calibration.txt", 'r') as f:
         contents = f.read()
 
@@ -105,37 +111,50 @@ def main():
     disObj = Disambiguate(inlierPoints, K)
     bestX, bestC, bestR, index = disObj.disambiguateCameraPose(C1, R1, potentailC2, potentailR2, P1)
 
-
-    #WRAPPPER code from NON Linear trinagulation
+    #Storing error values
+    mean_proj_error = {}
     P2=np.dot(np.dot(K, bestR), np.hstack((np.identity(3), -bestC)))
-    print("Finished Linear triangulation\nBeginning Non Linear triangulation")
+    reproj_errors = reprojection_error_estimation(inlierPoints[:, 2:4],bestX,P2,get_val=True )
+    mean_proj_error[2] = [('Linear_Triangulation', np.mean(reproj_errors))]
+
+    #plotting linear triangulation
     
+    #------------------------------------------------
+    #NON Linear trinagulation
+    print("Finished Linear triangulation\nBeginning Non Linear triangulation")
     X_list =  Non_Linear_Triangulation(P1, P2, bestX, inlierPoints, K)
 
-    #plots for linear and non-linear # storing reprojection errors
-    # plot_funcs.linear_vs_non_linear(X_list, X_list, index)
-    # reproj_errors = compute_reproj_err_all(max_inliers_locs[:, 2:4], M2, X_list_refined)
-    # mean_proj_error[2].append(('NonLinTri', np.mean(reproj_errors)))
+    # storing error values
+    reproj_errors = reprojection_error_estimation(inlierPoints[:, 2:4],X_list,P2,get_val=True )
+    mean_proj_error[2] = [('NonLinear_Triangulation', np.mean(reproj_errors))]
 
 
-    # Now we need to store all the required poses
+    #plotting non-linear triangulation
+
+
+
+    #----------------------------------------------
+    #Here we start prepping for PNP ransac
+    print("Finished NonLinear triangulation\nPrepping for PNP")
+
+
+    # Storing all camera poses in a dictionary
     camera_poses_dict = {}
     camera_poses_dict[1] = np.identity(4)[0:3, :]
     camera_poses_dict[2] = np.hstack((bestR, bestC.reshape(3,1)))
 
-
-    print("Finished NonLinear triangulation\nBeginning PNP")
     
     image_correspondences = [[2, 3], [3, 4], [4, 5], [5, 6]]
     x_X_map_dict = {} #This is in the format x_X_map[1]= [x1,y1,X,Y,Z]
  
     # In this section we are trying to map each image's 2D points(x) with a global set of 3D points (X)
+    
+    #For image 1
     x_X_image_1 = inlierPoints[:, 0:2]
-    X_list = np.reshape(X_list, (x_X_image_1.shape[0], 3))
     x_X_image_1 = np.hstack((x_X_image_1, X_list))
     x_X_map_dict[1] = x_X_image_1
 
-    # Map for image 2
+    # For image 2
     x_X_image_2 = inlierPoints[:, 2:4]
     x_X_image_2 = np.hstack((x_X_image_2, X_list))
     x_X_map_dict[2] = x_X_image_2
@@ -157,45 +176,46 @@ def main():
         file_name = "ransac"+img_pair+".txt"
 
         #Calculating projection Matrix of current image
-        R_current = camera_poses_dict[current_image][:, 0:3]
-        C_current = camera_poses_dict[current_image][:, 3].reshape((3, 1))
-        P_current=np.dot(np.dot(K, R_current), np.hstack((np.identity(3), -C_current)))
-
-        print("using correspondences from file " + file_name)
+        R_non_pnp = camera_poses_dict[current_image][:, 0:3]
+        C_non_pnp = camera_poses_dict[current_image][:, 3].reshape((3, 1))
+        P_current=np.dot(np.dot(K, R_non_pnp), np.hstack((np.identity(3), -C_non_pnp)))
 
         # get the 2d-3d correspondences for the 1st ref image
         x_X_cur_image = x_X_map_dict[current_image]
 
         # Get 2d -2d correpsondecnes for cur_image and next_image. of the format [x_cur,y_cur,x_next,y_next]
-        # matches_2d_2d = misc_funcs.get_ransac_pts_from_txt(path, file_name)
-        # matches_2d_2d = np.array(matches_2d_2d)
-        xcur_xnext=[]
+        correspondence_file_name=f"matches{current_image}{new_img_num}"
+        xcur_xnext=imgHelper.readPoints(correspondence_file_name)
+        xcur_xnext=xcur_xnext[:4,:]
         
         
         # now we try to get x_X mapping for new image
-        x_X_new_image, remaining_2d_2d = misc_funcs.get_2d_3d_corresp(x_X_cur_image, xcur_xnext)
+        #x_X_new_image is of the format [x1,y1,X,Y,Z]
+        x_X_new_image, remaining_2d_2d = x_X_map_creator(x_X_cur_image, xcur_xnext)
         print("shape of 2d-3d correspondences {}".format(np.shape(x_X_new_image)))
 
-        '''.............................PnP RANSAC...........................'''
-        print("performing PnP RANSAC to refine the poses")
-        pose_pnp_ransac, pnp_inlier_corresp = pnp_ransac(x_X_new_image, K, thresh=200)
+        ##.............................PnP RANSAC...........................'''
+        print("PnP RANSAC to refine the poses")
+        # x_list_new_image=x_X_new_image[:2,:]
+        # X_list_new_image=x_X_new_image[2:,:]
+        pose_pnp_ransac, pnp_inlier_corresp = pnp_ransac(x_X_new_image,K, thresh=200)
         R_pnp = pose_pnp_ransac[:, 0:3]
         C_pnp = pose_pnp_ransac[:, 3]
-        M_pnp = misc_funcs.get_projection_matrix(K, R_pnp, C_pnp)
-        pts_img_pnp = x_X_new_image[:, 0:2]
+        P_pnp = np.dot(np.dot(K, R_pnp), np.hstack((np.identity(3), -C_pnp)))
+        x_pnp = x_X_new_image[:, 0:2]
         X_pnp = x_X_new_image[:, 2:5]
-        reproj_errors = compute_reproj_err_all(pts_img_pnp, M_pnp, X_pnp)
+        reproj_errors = reprojection_error_estimation(x_pnp, P_pnp, X_pnp)
         mean_proj_error[new_img_num] = [('LinPnP', np.mean(reproj_errors))]
-
-
         '''.............................Non-linear PnP...........................'''
         print("performing Non-linear PnP to obtain optimal pose")
-        pose_non_linear = nonlinear_pnp(K, pose_pnp_ransac, pnp_inlier_corresp)
+        pose_non_linear = PNP_nonlinear(K, pose_pnp_ransac, pnp_inlier_corresp)
         R_non_pnp = pose_non_linear[:, 0:3]
         C_non_pnp = pose_non_linear[:, 3].reshape((3, 1))
-        M_non_pnp = misc_funcs.get_projection_matrix(K, R_non_pnp, C_non_pnp)
+
+        P_non_pnp=np.dot(np.dot(K, R_non_pnp), np.hstack((np.identity(3), -C_non_pnp)))
+        
         # error is calculated for the same set of image and 3d points but with refined pose
-        reproj_errors = compute_reproj_err_all(pts_img_pnp, M_non_pnp, X_pnp)
+        reproj_errors = reprojection_error_estimation(x_pnp,X_pnp,P_non_pnp)
         mean_proj_error[new_img_num].append(('NonLinPnP', np.mean(reproj_errors)))
 
         '''.............................Linear triangulation...........................'''
@@ -212,13 +232,13 @@ def main():
         # print reprojection error after non-linear triangulation
         pts_img_all_linear = new_img_2d_3d_linear[:, 0:2]
         X_all_linear = new_img_2d_3d_linear[:, 2:]
-        reproj_errors = compute_reproj_err_all(pts_img_all_linear, M_non_pnp, X_all_linear)
+        reproj_errors = compute_reproj_err_all(pts_img_all_linear, P_non_pnp, X_all_linear)
         mean_proj_error[new_img_num].append(('LinTri', np.mean(reproj_errors)))
 
 
         '''.............................Non-Linear triangulation...........................'''
         print("performing Non-Linear Triangulation to obtain 3d equiv for remaining 2d points")
-        X_non_lin_tri = nonlinear_triang(P_current, M_non_pnp, X_lin_tri, remaining_2d_2d, K)
+        X_non_lin_tri = nonlinear_triang(P_current, P_non_pnp, X_lin_tri, remaining_2d_2d, K)
         X_non_lin_tri = X_non_lin_tri.reshape((remaining_2d_2d.shape[0], 3))
 
         remaining_2d_3d = remaining_2d_2d[:, 2:4]
@@ -229,7 +249,7 @@ def main():
         # print reprojection error after non-linear triangulation
         pts_img_all = x_X_new_image[:, 0:2]
         X_all = x_X_new_image[:, 2:]
-        reproj_errors = compute_reproj_err_all(pts_img_all, M_non_pnp, X_all)
+        reproj_errors = compute_reproj_err_all(pts_img_all, P_non_pnp, X_all)
         mean_proj_error[new_img_num].append(('NonLinTri', np.mean(reproj_errors)))
 
         # store the current pose after non linear pnp
