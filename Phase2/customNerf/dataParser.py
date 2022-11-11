@@ -14,7 +14,7 @@ class Data():
         for image in image_order:
             img = cv2.imread(os.path.join(self.path+f'{type}/', image))
             images.append(img)
-        return images
+        return np.array(images)
 
     def readJson(self, type):
         f = open(self.path+type)
@@ -26,8 +26,8 @@ class Data():
             rotation.append(float(frame["rotation"]))
             transform_matrix = frame["transform_matrix"]
             numpyTransform = np.asarray(transform_matrix, dtype=np.float32)
-            transformationMatrix.append(numpyTransform.T)
+            transformationMatrix.append(numpyTransform)
 
         f.close()
-        return rotation, transformationMatrix
+        return np.array(rotation), np.array(transformationMatrix)
 
