@@ -8,9 +8,8 @@ class LinearTriangulation():
     def skew(self, x):
         return np.array([[0, -x[2], x[1]], [x[2], 0, x[0]], [x[1], x[0], 0]])
 
+
     # def LinearTriangulation(self, C1, R1, C2, R2, x1, x2):
-
-
     #     n_points = x1.shape[0]
 
     #     C1 = np.reshape(C1, (3, 1))
@@ -33,7 +32,6 @@ class LinearTriangulation():
     #         normalized_3D_coordinates = np.array(v[-1]/v[-1, -1]).flatten()
     #         # x = np.reshape(x, (len(x), -1)
     #         X[i, :] = normalized_3D_coordinates[0:3].T
-
     #     return X
 
     def LinearTrinagulation(self, M1, C2, R2, x1, x2):

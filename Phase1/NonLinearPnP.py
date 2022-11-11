@@ -52,6 +52,7 @@ def PNP_nonlinear(x_list,X_list,K,R_updated,C):
     q0=transform.as_quat()
     params= [C[0], C[1], C[2], q0[0], q0[1], q0[2], q0[3]]
 
+
     #optimization
     param_new = optimizer.least_squares(fun=reprojection_error, method="dogbox", x0=params, args=[K, X_list, x_list])
     C_updated = param_new.x[0:3]
