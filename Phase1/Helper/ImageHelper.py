@@ -6,11 +6,12 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from cycler import cycler
 import math
+from pathlib import Path
 
 
 class ImageHelper():
     def __init__(self, path) -> None:
-        self.ImagePath = path+"/Images/"
+        self.ImagePath = Path(path+"/Images/")
         self.path = path
 
     def readImages(self):
@@ -25,7 +26,7 @@ class ImageHelper():
         return images
 
     def readPoints(self, file_name):
-        file = self.path + file_name
+        file = Path(self.path + file_name)
         with open(file, 'r') as f:
             lines = f.readlines()
 
