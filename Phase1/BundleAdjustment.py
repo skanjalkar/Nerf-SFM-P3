@@ -46,8 +46,8 @@ def bundle_adjustment(pose_set, X_points, x_Xindex_mapping, K):
 
     return optimized_pose_set, X_world_all_opt
 
-def optimization_parameters(pose_set, X_points, map_2d_3d):
 
+def optimization_parameters(pose_set, X_points, map_2d_3d):
     #initilizing paramters
     params = np.empty(0, dtype=np.float32)
     pts_3D_indices = np.empty(0, dtype=int)
@@ -90,8 +90,8 @@ def optimizer(params, n_cam, n_3d, indices_3d_pts, img_pts_2d, indices_cam, K):
     for i, X in enumerate(world_pts_3d):
         transform= trans.from_quat((param_cam[i, :4]))
         R = transform.as_matrix()
-        C = param_cam[i, 4:]
-        P= np.dot(np.dot(K, R), np.hstack((np.identity(3), -C)))
+        C = param_cam[i, 4:].reshape(3,1)
+        P= np.dot(np.dot(K, R), np.hstack((np.identity(3), -C.reshape(3,1))))
         X = X.reshape((4, 1))
         x = np.dot(P, X)
         x = x/x[2]

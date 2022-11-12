@@ -175,11 +175,12 @@ def main():
 
     # estimate pose for the remaining cams
     for _, a_correspondence in enumerate(image_correspondences):
-
+        print("......................................")
+        print(f"Estimating pose for Picture {a_correspondence[1]}")
+        print("......................................")
         current_image = a_correspondence[0]
         new_img_num = a_correspondence[1]
-        img_pair = str(current_image)+str(new_img_num)
-        file_name = "ransac"+img_pair+".txt"
+        print(f"Estimating pose for Picture {new_img_num}")
 
         #Calculating projection Matrix of current image
         R_non_pnp = camera_poses_dict[current_image][:, 0:3]
@@ -201,10 +202,10 @@ def main():
         #x_X_new_image is of the format [x1,y1,X,Y,Z]
         x_X_new_image, remaining_2d_2d = x_X_map_creator(x_X_cur_image, xcur_xnext)
         
-        print("shape of 2d-3d correspondences {}".format(np.shape(x_X_new_image)))
+
 
         ##------------PnP RANSAC----------------------------
-        print("PnP RANSAC to refine the poses")
+        print("------\nStarting PnP RANSAC ")
         # x_list_new_image=x_X_new_image[:2,:]
         # X_list_new_image=x_X_new_image[2:,:]
         pose_pnp_ransac, pnp_inlier_corresp = pnp_ransac(x_X_new_image,K, thresh=200)
@@ -220,7 +221,7 @@ def main():
 
 
         ###---------------NON LINEAR PNP-------------------
-        print("performing Non-linear PnP to obtain optimal pose")
+        print("------\nperforming Non-linear PnP to obtain optimal pose")
 
 
         R_non_pnp,C_non_pnp = PNP_nonlinear(x_pnp,X_pnp,K, R_pnp, C_pnp)
@@ -232,7 +233,7 @@ def main():
 
 
         ###---------------LINEAR TRIANGULATION FOR REMAINIG POINTS-------------------
-        print("performing Linear Triangulation to obtain 3d equiv for remaining 2d points")
+        print("------\nPerforming Linear Triangulation on remaining points")
         # find the 2d-3d mapping for the remaining image points in the new image by doing triangulation
 
         x_cur_remaining=remaining_2d_2d[:,0:2]
@@ -241,9 +242,9 @@ def main():
         X_lin_tri_remaining = X_lin_tri_remaining.reshape((remaining_2d_2d.shape[0], 3))
 
 
-        print("(linear)points before adding remaining corresp - {}".format(x_X_new_image.shape))
+        print(f"{x_X_new_image.shape} points before adding remaining correspondences")
         x_X_new_image_linear = np.vstack((x_X_new_image, np.hstack((x_new_remaining, X_lin_tri_remaining))))
-        print("(linear)points after adding remaining corresp - {}".format(x_X_new_image_linear.shape))
+        print(f"{x_X_new_image_linear.shape} points after adding remaining correspondences")
 
 
         # error calculation and storing
@@ -251,15 +252,13 @@ def main():
         mean_proj_error[new_img_num].append(('LinTri_compleyte points', np.mean(reproj_errors)))
 
     ##---------------NON LINEAR TRIANGULATION FOR REMAINIG POINTS-------------------
-        print("performing Non-Linear Triangulation to obtain 3d equiv for remaining 2d points")
+        print("------\nNon Liner triangulation for remaining correspondences")
         X_non_lin_tri = Non_Linear_Triangulation(P_current, P_non_pnp, X_lin_tri_remaining, remaining_2d_2d)
         X_non_lin_tri = X_non_lin_tri.reshape((remaining_2d_2d.shape[0], 3))
 
-        print("(Nlinear)points before adding remaining corresp - {}".format(x_X_new_image.shape))
         x_X_new_image_non_linear = np.vstack((x_X_new_image, np.hstack((remaining_2d_2d[:, 2:4], X_non_lin_tri))))
-        print("(Nlinear)points after adding remaining corresp - {}".format(x_X_new_image_non_linear.shape))
 
-        # print reprojection error after non-linear triangulation
+        # error calculation and storing
         x_non_lintriang_all = x_X_new_image_non_linear[:, 0:2]
         X_non_lintriang_all = x_X_new_image_non_linear[:, 2:]
         reproj_errors = reprojection_error_estimation(x_X_new_image_non_linear[:,:2],x_X_new_image_non_linear[:,2:], P_non_pnp)
@@ -284,7 +283,7 @@ def main():
 
         
         #BA implemntation refereced from https://scipy-cookbook.readthedocs.io/items/bundle_adjustment.html 
-        print("doing Bundle Adjustment --> ")
+        print("------\nStarting Bundle adjustment ")
         pose_set_opt, X_set_opt = bundle_adjustment(camera_poses_dict, X_set, x_Xindex_mapping, K)
         print("keys --> {}".format(pose_set_opt.keys()))
 
@@ -292,7 +291,7 @@ def main():
         R_ba = pose_set_opt[new_img_num][:, 0:3]
         C_ba = pose_set_opt[new_img_num][:, 3]
         X_all_ba = X_set_opt[index_start:index_end].reshape((x_non_lintriang_all.shape[0], 3))
-        P_ba = np.dot(np.dot(K, R_ba), np.hstack((np.identity(3), -C_ba)))
+        P_ba = np.dot(np.dot(K, R_ba), np.hstack((np.identity(3), -C_ba.reshape(3,1))))
         reproj_errors = reprojection_error_estimation(x_non_lintriang_all, X_all_ba,P_ba)
         mean_proj_error[new_img_num].append(('BA', np.mean(reproj_errors)))
 
@@ -306,9 +305,7 @@ def main():
         camera_poses_dict = pose_set_opt
 
         print("......................................")
-
-    # plotting the output of BA
-    # plot_funcs.bundle_adjustment_op(pose_set_opt, X_set_opt)
+    
     print(mean_proj_error)
 if __name__ == "__main__":
     a=os.path.join(os.getcwd(),"Data")
