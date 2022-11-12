@@ -48,16 +48,14 @@ def pnp_ransac(correspondences,K, thresh = 20,max_inliers=0):
     '''
 
     random.seed(26)
-    print(correspondences)
 
     # RANSAC algorithim
     for i in range(10000):
 
         # choose 6 random points and get linear pnp estimate
-        sample = np.array(random.sample(correspondences, 6), np.float32)
+        sample = np.array(random.sample(list(correspondences), 6), np.float32)
         sample_x=sample[:,:2]
         sample_X=sample[:,2:]
-
         R, C = LinearPnP.PNP_linear(sample_x,sample_X, K)
 
         # form the projection matrix

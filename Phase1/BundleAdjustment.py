@@ -39,7 +39,7 @@ def bundle_adjustment(pose_set, X_points, x_Xindex_mapping, K):
     i = 1
     for a_camera_cam in camera_params:
         transform= trans.from_quat(a_camera_cam[:4])
-        R = transform.as_dcm()
+        R = transform.as_matrix()
         C = a_camera_cam[4:].reshape((3, 1))
         optimized_pose_set[i] = np.hstack((R, C))
         i += 1
@@ -89,7 +89,7 @@ def optimizer(params, n_cam, n_3d, indices_3d_pts, img_pts_2d, indices_cam, K):
 
     for i, X in enumerate(world_pts_3d):
         transform= trans.from_quat((param_cam[i, :4]))
-        R = transform.as_dcm()
+        R = transform.as_matrix()
         C = param_cam[i, 4:]
         P= np.dot(np.dot(K, R), np.hstack((np.identity(3), -C)))
         X = X.reshape((4, 1))

@@ -209,7 +209,7 @@ def main():
         # X_list_new_image=x_X_new_image[2:,:]
         pose_pnp_ransac, pnp_inlier_corresp = pnp_ransac(x_X_new_image,K, thresh=200)
         R_pnp = pose_pnp_ransac[:, 0:3]
-        C_pnp = pose_pnp_ransac[:, 3]
+        C_pnp = pose_pnp_ransac[:, 3].reshape(-1,1)
         P_pnp = np.dot(np.dot(K, R_pnp), np.hstack((np.identity(3), -C_pnp)))
         x_pnp = x_X_new_image[:, 0:2]
         X_pnp = x_X_new_image[:, 2:5]
@@ -223,9 +223,7 @@ def main():
         print("performing Non-linear PnP to obtain optimal pose")
 
 
-        pose_non_linear = PNP_nonlinear(x_pnp,X_pnp,K, R_pnp, C_pnp)
-        R_non_pnp = pose_non_linear[:, 0:3]
-        C_non_pnp = pose_non_linear[:, 3].reshape((3, 1))
+        R_non_pnp,C_non_pnp = PNP_nonlinear(x_pnp,X_pnp,K, R_pnp, C_pnp)
         P_non_pnp=np.dot(np.dot(K, R_non_pnp), np.hstack((np.identity(3), -C_non_pnp)))
 
         # error is calculated for the same set of image and 3d points but with refined pose
@@ -247,7 +245,7 @@ def main():
         x_X_new_image_linear = np.vstack((x_X_new_image, np.hstack((x_new_remaining, X_lin_tri_remaining))))
         print("(linear)points after adding remaining corresp - {}".format(x_X_new_image_linear.shape))
 
-        
+
         # error calculation and storing
         reproj_errors = reprojection_error_estimation(x_X_new_image_linear[:, 0:2],x_X_new_image_linear[:, 2:], P_non_pnp)
         mean_proj_error[new_img_num].append(('LinTri_compleyte points', np.mean(reproj_errors)))
@@ -314,5 +312,7 @@ def main():
     print(mean_proj_error)
 if __name__ == "__main__":
     a=os.path.join(os.getcwd(),"Data")
-    print(a)
+    # X=np.ones((4,1))
+    # row_1=np.hstack((X.T,np.zeros((1,8))))
+    # print(row_1)
     main()

@@ -21,20 +21,25 @@ def PNP_linear(x_list,X_list,K):
     A = np.empty((0, 12), np.float32)
     
     for x,X in zip(x_list,X_list):
-
         # normalizing coordinates
+        x=np.array([x[0],x[1],1]).reshape(3,-1)
         x_normalized = np.dot(np.linalg.inv(K),x)
         x_normalized = x_normalized/x_normalized[2]
 
         X = np.append(X, 1)
-
+        X=X.reshape(-1,4)
         #Creating A matrix (refer to report)
-        row_1=np.hstack((X.T,np.zeros((1,8))))
-        row_2=np.hstack((np.zeros((1,4)),X.T,np.zeros((1,4))))
-        row_3=np.hstack((np.zeros((1,8)),X.T))
+        row_1=np.hstack((X,np.zeros((1,8))))
+        row_2=np.hstack((np.zeros((1,4)),X,np.zeros((1,4))))
+        row_3=np.hstack((np.zeros((1,8)),X))
+
+        # row_1=np.concatenate((X.reshape(-1,1),np.zeros((1,8))))
+        # row_2=np.concatenate((np.zeros((1,4)),X.T,np.zeros((1,4))))
+        # row_3=np.concatenate((np.zeros((1,8)),X.T))
+
         A_one_point=np.vstack((row_1,row_2,row_3))
-        A_one_point=np.dot(skew(x),A)
-        A=np.vstack(A,A_one_point)
+        A_one_point=np.dot(skew(x),A_one_point)
+        A=np.vstack((A,A_one_point))
        
     A = np.float32(A)
     U,D,V_t = np.linalg.svd(A)
