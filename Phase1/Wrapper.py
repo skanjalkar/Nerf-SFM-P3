@@ -14,6 +14,8 @@ from NonLinearPnP import PNP_nonlinear
 from BundleAdjustment import bundle_adjustment
 from LinearTriangulation import LinearTrinagulation
 from pathlib import Path, PureWindowsPath
+from Helper.Misc import plot_3D
+from Helper.Misc import plot_after_BA
 
 
 cwd = Path.cwd()
@@ -108,6 +110,7 @@ def main():
     mean_proj_error = {}
     P2=np.dot(np.dot(K, bestR), np.hstack((np.identity(3), -bestC)))
     reproj_errors = reprojection_error_estimation(inlierPoints[:, 2:4],bestX,P2)
+    print("2lin",np.mean(reproj_errors))
     mean_proj_error[2] = [('Linear_Triangulation', np.mean(reproj_errors))]
 
     #plotting linear triangulation
@@ -150,7 +153,7 @@ def main():
     camera_poses_dict[2] = np.hstack((bestR, bestC.reshape(3,1)))
 
 
-    image_correspondences = [[2, 3], [3, 4], [4, 5], [5, 6]]
+    image_correspondences = [[2, 3], [3, 4], [4, 5]]
     x_X_map_dict = {} #This is in the format x_X_map[1]= [x1,y1,X,Y,Z]
 
     # In this section we are trying to map each image's 2D points(x) with a global set of 3D points (X)
@@ -215,6 +218,8 @@ def main():
         x_pnp = x_X_new_image[:, 0:2]
         X_pnp = x_X_new_image[:, 2:5]
 
+        # plot_3D(X_pnp,C_pnp,"after pnp")
+
         #error estimation and storing
         reproj_errors = reprojection_error_estimation(x_pnp, X_pnp,P_pnp)
         mean_proj_error[new_img_num] = [('Linear_PnP', np.mean(reproj_errors))]
@@ -231,7 +236,7 @@ def main():
         reproj_errors = reprojection_error_estimation(x_pnp,X_pnp,P_non_pnp)
         mean_proj_error[new_img_num].append(('NonLinPnP', np.mean(reproj_errors)))
 
-
+        # plot_3D(X_pnp,C_non_pnp,"after non pnp")
         ###---------------LINEAR TRIANGULATION FOR REMAINIG POINTS-------------------
         print("------\nPerforming Linear Triangulation on remaining points")
         # find the 2d-3d mapping for the remaining image points in the new image by doing triangulation
@@ -246,6 +251,7 @@ def main():
         x_X_new_image_linear = np.vstack((x_X_new_image, np.hstack((x_new_remaining, X_lin_tri_remaining))))
         print(f"{x_X_new_image_linear.shape} points after adding remaining correspondences")
 
+        # plot_3D(X_lin_tri_remaining,C_non_pnp,"after lin tri remainig points")
 
         # error calculation and storing
         reproj_errors = reprojection_error_estimation(x_X_new_image_linear[:, 0:2],x_X_new_image_linear[:, 2:], P_non_pnp)
@@ -264,6 +270,7 @@ def main():
         reproj_errors = reprojection_error_estimation(x_X_new_image_non_linear[:,:2],x_X_new_image_non_linear[:,2:], P_non_pnp)
         mean_proj_error[new_img_num].append(('NonLinTri_complete_points', np.mean(reproj_errors)))
 
+        # plot_3D(X_non_lintriang_all,C_non_pnp,"after non linear triangulation of all points")
         # store the current pose after non linear pnp
         camera_poses_dict[new_img_num] = np.hstack((R_non_pnp, C_non_pnp.reshape((3, 1))))
 
@@ -286,7 +293,6 @@ def main():
         print("------\nStarting Bundle adjustment ")
         pose_set_opt, X_set_opt = bundle_adjustment(camera_poses_dict, X_set, x_Xindex_mapping, K)
         print("keys --> {}".format(pose_set_opt.keys()))
-
         # compute reproj error after BA
         R_ba = pose_set_opt[new_img_num][:, 0:3]
         C_ba = pose_set_opt[new_img_num][:, 3]
@@ -303,13 +309,10 @@ def main():
         x_X_map_dict[new_img_num] = np.hstack((x_non_lintriang_all, X_all_ba))
         # pose_set[new_img_num] = np.hstack((R_ba, C_ba.reshape((3, 1))))
         camera_poses_dict = pose_set_opt
-
+        print(mean_proj_error[new_img_num])
         print("......................................")
+        plot_after_BA(camera_poses_dict,X_set)
     
     print(mean_proj_error)
 if __name__ == "__main__":
-    a=os.path.join(os.getcwd(),"Data")
-    # X=np.ones((4,1))
-    # row_1=np.hstack((X.T,np.zeros((1,8))))
-    # print(row_1)
     main()

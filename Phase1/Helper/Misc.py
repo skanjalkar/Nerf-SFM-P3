@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 def x_X_map_creator(x_X_cur_image_map, xcur_xnew_map):
     
@@ -24,3 +25,44 @@ def x_X_map_creator(x_X_cur_image_map, xcur_xnew_map):
             left_over_xcur_xnew.append(a_point)
 
     return np.array(x_X_new_img_map), np.array(left_over_xcur_xnew)
+
+def plot_3D(X_list,camera_locations,name="test"):
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+    
+
+    camera_locations=camera_locations.ravel()
+    ax.scatter(camera_locations[0],camera_locations[1],camera_locations[2],color='red',marker='x')
+
+    x=X_list[:,0]
+    y=X_list[:,1]
+    z=X_list[:,2]
+    ax.scatter(x.ravel(), y.ravel(), -z.ravel(), marker='o')
+    ax.set_xlabel('X Label')
+    ax.set_ylabel('Y Label')
+    ax.set_zlabel('Z Label')
+    ax.set_title("name")
+    plt.show()
+
+def plot_after_BA(poses_set,X_set):
+    c_list=[]
+    for a_pose in poses_set:
+        C=poses_set[a_pose][:,-1]
+        C=C.reshape(-1)
+        c_list.append(C)
+    c_list=np.array(c_list)
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+
+
+    cx,cy,cz=c_list[:,0],c_list[:,1],c_list[:,2]
+    ax.scatter(cx.ravel(), cy.ravel(), -cz.ravel(), color='red',marker='x')
+    x=X_set[:,0]
+    y=X_set[:,1]
+    z=X_set[:,2]
+    ax.scatter(x.ravel(), y.ravel(), -z.ravel(), marker='o')
+    ax.set_xlabel('X Label')
+    ax.set_ylabel('Y Label')
+    ax.set_zlabel('Z Label')
+    ax.set_title("name")
+    plt.show()

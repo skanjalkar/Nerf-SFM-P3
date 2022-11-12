@@ -60,13 +60,11 @@ class Disambiguate():
         plt.ylim(-5, 5)
         # plt.show()
 
-        print(bestX.shape)
-
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        plotHelper.plotTriangle(bestX, bestC, bestR, i)
-        plt.xlim(-5, 5)
-        plt.ylim(-5, 5)
-        # plt.show()
+        # fig = plt.figure()
+        # ax = fig.add_subplot(111)
+        # plotHelper.plotTriangle(bestX, bestC, bestR, i)
+        # plt.xlim(-5, 5)
+        # plt.ylim(-5, 5)
+        # # plt.show()
 
         return bestX, bestC, bestR, i

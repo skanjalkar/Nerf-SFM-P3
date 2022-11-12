@@ -23,9 +23,8 @@ def optimizer_function(params,K,x,X):
     return reprojection_error_list
 
 def err(P, x, X):
-
+    
     x_hat = np.dot(P, X)
-
     norm=x_hat[2]
     x_hat=x_hat/norm
     error=((x_hat[0] - x[0])**2) + ((x_hat[1] - x[1])**2)
