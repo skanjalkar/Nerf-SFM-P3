@@ -21,7 +21,7 @@ def reprojection_error_estimation(x,X,P,get_val=False):
     # Normalizing projected points
     x_hat = np.dot(P, X)
     x_hat = x_hat.T
-    normalization_factor=x_hat[:,2]
+    normalization_factor=x_hat[:,2].reshape(-1,1)
     x_hat=x_hat/normalization_factor
     x_hat=x_hat[:,:2]
     
@@ -48,6 +48,7 @@ def pnp_ransac(correspondences,K, thresh = 20,max_inliers=0):
     '''
 
     random.seed(26)
+    print(correspondences)
 
     # RANSAC algorithim
     for i in range(10000):

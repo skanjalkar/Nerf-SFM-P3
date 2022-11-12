@@ -30,14 +30,16 @@ def skew(self, x):
 #         X[i, :] = normalized_3D_coordinates[0:3].T
 #     return X
 
-def LinearTrinagulation(self, P2, C2, R2, K, x1,x2):
+def LinearTrinagulation(P2, C2, R2, K, x1,x2):
     '''
     Inputs:
         P2 : Aprojection matrix of first camera
         C2 : A 3x1 matrix of cameras translation
         R2 : Rotation matrix of camera of size 3x3
         K  : Camera instrinsinc matrix of size 3x3
-        x_cur_x_new : A 2D -2D correspondence between a pair of images of size nx4 : A row looks like [x1,y1,x2,y2]
+        x1
+        x2
+        NOT used :  x_cur_x_new : A 2D -2D correspondence between a pair of images of size nx4 : A row looks like [x1,y1,x2,y2]
 
     Outputs:
         R      : Rotation matrix of size 3x3
@@ -75,5 +77,5 @@ def LinearTrinagulation(self, P2, C2, R2, K, x1,x2):
         X = X.reshape((3, 1))
 
         xList.append(X)
-    xList = np.array(xList)
+    xList = np.array(xList).reshape(-1,3)
     return xList

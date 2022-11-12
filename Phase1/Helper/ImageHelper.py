@@ -10,7 +10,7 @@ from pathlib import Path
 
 class ImageHelper():
     def __init__(self, path) -> None:
-        self.ImagePath = Path(path+"/Images/")
+        self.ImagePath = os.path.join(path,"Images")
         self.path = path
 
     def readImages(self):
@@ -25,7 +25,7 @@ class ImageHelper():
         return images
 
     def readPoints(self, file_name):
-        file = Path(self.path + file_name)
+        file = os.path.join(self.path,file_name)
         with open(file, 'r') as f:
             lines = f.readlines()
 
@@ -86,7 +86,6 @@ class Plot():
 
     def plotTriangle(self, bestX, bestC, bestR, i):
         bestX = np.array(bestX)
-        # pry()
         # bestX = np.reshape((bestX.shape[0], 3))
 
         colors = np.array(['y', 'b', 'c', 'r'])

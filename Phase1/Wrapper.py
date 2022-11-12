@@ -75,37 +75,20 @@ def main():
     # RANSAC
     img1, img2 = cv2.cvtColor(images[0], cv2.COLOR_BGR2GRAY), cv2.cvtColor(images[1], cv2.COLOR_BGR2GRAY)
     ransacObj = RANSAC()
-    inlierPoints, outlierPoints, bestF, img1Pts, img2Pts = ransacObj.getInliersRansac(matchPoints)
-    # pts1, pts2 = [], []
-    # for i in range(len(inlierPoints)):
-    #     img1x, img1y = int(inlierPoints[i][0]), int(inlierPoints[i][1])
-    #     pts1.append((img1x, img1y))
-    #     img2x, img2y = int(inlierPoints[i][2]), int(inlierPoints[i][3])
-    #     pts2.append((img2x, img2y))
-    # pts1 = np.array(pts1)
-    # pts2 = np.array(pts2)
-    # Find epilines corresponding to points in right image (second image) and
-    # drawing its lines on left image
-    # lines1 = cv2.computeCorrespondEpilines(pts2.reshape(-1,1,2), 2,bestF)
-    # lines1 = lines1.reshape(-1,3)
-    # img5,img6 = drawlines(img1,img2,lines1,pts1,pts2)
+    do_RANSAC=False
+    if do_RANSAC:
+        inlierPoints, outlierPoints, bestF, img1Pts, img2Pts = ransacObj.getInliersRansac(matchPoints)
+        np.save("inlierPoints",inlierPoints)
+        np.save("outlierPoints",outlierPoints)
+        np.save("bestF",bestF)
 
-    # Find epilines corresponding to points in left image (first image) and
-    # drawing its lines on right image
-    # lines2 = cv2.computeCorrespondEpilines(pts1.reshape(-1,1,2), 1,bestF)
-    # lines2 = lines2.reshape(-1,3)
-    # img3,img4 = drawlines(img2,img1,lines2,pts2,pts1)
+    else:
+        inlierPoints=np.load(os.path.join(os.getcwd(),"inlierPoints.npy"))
+        outlierPoints=np.load("outlierPoints.npy")
+        bestF=np.load("bestF.npy")
+    # imgHelper.plotInliers(images[0], images[1], inlierPoints, "Inliers", False)
+    # imgHelper.plotOutliers(images[0], images[1], outlierPoints)
 
-    # cv2.imshow('img3', img3)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
-
-    # cv2.imshow('img5', img5)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
-
-    imgHelper.plotInliers(images[0], images[1], inlierPoints, "Inliers", False)
-    imgHelper.plotOutliers(images[0], images[1], outlierPoints)
 
     # Essential matrix
     eObj = EMatrix(bestF, K)
@@ -115,14 +98,16 @@ def main():
     cameraPoseObj = CameraPose(E)
     potentailC2, potentailR2 = cameraPoseObj.cameraPoses()
 
+
+
     # LinearTriangulation
     disObj = Disambiguate(inlierPoints, K)
-    bestX, bestC, bestR, index = disObj.disambiguateCameraPose(C1, R1, potentailC2, potentailR2, P1)
-
+    bestX, bestC, bestR, index = disObj.disambiguateCameraPose(potentailC2, potentailR2, P1,K)
+    bestX.reshape(-1,3)
     #Storing error values
     mean_proj_error = {}
     P2=np.dot(np.dot(K, bestR), np.hstack((np.identity(3), -bestC)))
-    reproj_errors = reprojection_error_estimation(inlierPoints[:, 2:4],bestX,P2,get_val=True )
+    reproj_errors = reprojection_error_estimation(inlierPoints[:, 2:4],bestX,P2)
     mean_proj_error[2] = [('Linear_Triangulation', np.mean(reproj_errors))]
 
     #plotting linear triangulation
@@ -130,14 +115,27 @@ def main():
     #------------------------------------------------
     #NON Linear trinagulation
     print("Finished Linear triangulation\nBeginning Non Linear triangulation")
-    X_list =  Non_Linear_Triangulation(P1, P2, bestX, inlierPoints, K)
+   
+
+    #saving values
+    save=False
+    if save:
+        X_list =  Non_Linear_Triangulation(P1, P2, bestX, inlierPoints)
+        np.save("X_list_nonlin",X_list)
+    else:
+        X_list=np.load(os.path.join(os.getcwd(),"X_list_nonlin.npy"))
 
     # storing error values
-    reproj_errors = reprojection_error_estimation(inlierPoints[:, 2:4],X_list,P2,get_val=True )
+    reproj_errors = reprojection_error_estimation(inlierPoints[:, 2:4],X_list,P2 )
     mean_proj_error[2] = [('NonLinear_Triangulation', np.mean(reproj_errors))]
 
 
     #plotting non-linear triangulation
+    plotHelper = Plot()
+    plotHelper.plotTriangle(X_list, bestC, bestR, index)
+    # plt.xlim(-5, 5)
+    # plt.ylim(-5, 5)
+    # plt.show()
 
 
 
@@ -192,14 +190,17 @@ def main():
         x_X_cur_image = x_X_map_dict[current_image]
 
         # Get 2d -2d correpsondecnes for cur_image and next_image. of the format [x_cur,y_cur,x_next,y_next]
-        correspondence_file_name=f"matches{current_image}{new_img_num}"
+        correspondence_file_name=f"matches{current_image}{new_img_num}.txt"
         xcur_xnext=imgHelper.readPoints(correspondence_file_name)
-        xcur_xnext=xcur_xnext[:4,:]
-
+ 
+        xcur_xnext=xcur_xnext[:,:4]
+        print(xcur_xnext.shape)
+        
 
         #  NOW WE GET : x_X mapping for new image
         #x_X_new_image is of the format [x1,y1,X,Y,Z]
         x_X_new_image, remaining_2d_2d = x_X_map_creator(x_X_cur_image, xcur_xnext)
+        
         print("shape of 2d-3d correspondences {}".format(np.shape(x_X_new_image)))
 
         ##------------PnP RANSAC----------------------------
@@ -246,14 +247,14 @@ def main():
         x_X_new_image_linear = np.vstack((x_X_new_image, np.hstack((x_new_remaining, X_lin_tri_remaining))))
         print("(linear)points after adding remaining corresp - {}".format(x_X_new_image_linear.shape))
 
-
+        
         # error calculation and storing
         reproj_errors = reprojection_error_estimation(x_X_new_image_linear[:, 0:2],x_X_new_image_linear[:, 2:], P_non_pnp)
         mean_proj_error[new_img_num].append(('LinTri_compleyte points', np.mean(reproj_errors)))
 
     ##---------------NON LINEAR TRIANGULATION FOR REMAINIG POINTS-------------------
         print("performing Non-Linear Triangulation to obtain 3d equiv for remaining 2d points")
-        X_non_lin_tri = Non_Linear_Triangulation(K,P_current, P_non_pnp, X_lin_tri_remaining, remaining_2d_2d)
+        X_non_lin_tri = Non_Linear_Triangulation(P_current, P_non_pnp, X_lin_tri_remaining, remaining_2d_2d)
         X_non_lin_tri = X_non_lin_tri.reshape((remaining_2d_2d.shape[0], 3))
 
         print("(Nlinear)points before adding remaining corresp - {}".format(x_X_new_image.shape))

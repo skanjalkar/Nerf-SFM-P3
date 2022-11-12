@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import optimize
 
-def Non_Linear_Triangulation(K,P1, P2, X_estimate, inliex_cur_x_new, X_updated_list = []):
+def Non_Linear_Triangulation(P1, P2, X_estimate, inliex_cur_x_new):
     '''
     Inputs:
     P1: Projection matrix of camera 1
@@ -15,9 +15,9 @@ def Non_Linear_Triangulation(K,P1, P2, X_estimate, inliex_cur_x_new, X_updated_l
     # Getting matching points in the image
     x_pts = inliex_cur_x_new[:, 0:2]
     x_dash_pts = inliex_cur_x_new[:, 2:4]
-
+    X_updated_list = []
     for point1, point2, X in zip(x_pts, x_dash_pts, X_estimate):
-        X = X.reshape(X.shape[0],-1)
+        X = X.reshape(X.shape[0],)
         result = optimize.least_squares(fun=optimizer,x0=X, args=[point1, P1, point2, P2])
         X_updated = result.x
         X_updated = np.reshape(X, (3,))

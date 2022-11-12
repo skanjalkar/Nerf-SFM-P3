@@ -18,7 +18,15 @@ class Disambiguate():
                 count += 1
         return count
 
-    def disambiguateCameraPose(self, C1, R1, C2, R2, P1):
+    def disambiguateCameraPose(self,C2, R2, P1,K):
+        '''
+        Inputs:
+        C2
+        R2
+        P1
+        K
+        '''
+
         # find the maximum number of points in both
         # camera poses
         # the one with max points is the correct answer
@@ -33,7 +41,7 @@ class Disambiguate():
         index = 0
         for r2, c2 in zip(R2, C2):
             c2 = c2.reshape((3, 1))
-            X2 = LinearTrinagulation(P1, c2, r2, x1, x2)
+            X2 = LinearTrinagulation(P1, c2, r2, K,x1, x2)
             # X2 = linTriangle.LinearTriangulation(C1, R1, c2, r2, x1, x2)
             # pry()
             count = self.chiralityCheck(X2, r2, c2)
@@ -46,11 +54,11 @@ class Disambiguate():
                 bestX = X2
                 i = index
             index += 1
-        print("Found best x")
+        # print("Found best x")
 
         plt.xlim(-5, 5)
         plt.ylim(-5, 5)
-        plt.show()
+        # plt.show()
 
         print(bestX.shape)
 
@@ -59,6 +67,6 @@ class Disambiguate():
         plotHelper.plotTriangle(bestX, bestC, bestR, i)
         plt.xlim(-5, 5)
         plt.ylim(-5, 5)
-        plt.show()
+        # plt.show()
 
         return bestX, bestC, bestR, i
