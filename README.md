@@ -2,7 +2,7 @@
 CS549 Project at WPI
 
 ## Authors
-Shreyas Kanjalkar
+Shreyas Kanjalkar\\
 Khizar Mohammed Amjed Mohammed
 
 # Phase 1
