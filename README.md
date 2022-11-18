@@ -1,8 +1,8 @@
 # Nerf-Swift-P3
-CS549 Project at WPI
+Implementation of Structure from Motion and NeRF paper in pytorch.
 
 ## Authors
-Shreyas Kanjalkar\\
+[Shreyas Kanjalkar](https://github.com/zen1405)\
 Khizar Mohammed Amjed Mohammed
 
 # Phase 1
